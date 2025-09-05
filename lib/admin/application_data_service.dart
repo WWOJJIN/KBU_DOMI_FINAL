@@ -90,7 +90,6 @@ class ApplicationDataService {
 
           final mappedItem = {
             'id': item['checkin_id']?.toString() ?? '',
-            'checkin_id': item['checkin_id']?.toString() ?? '',
             'studentId': item['student_id']?.toString() ?? '',
             'studentName': item['name']?.toString() ?? '',
             'department': item['department']?.toString() ?? '',
@@ -129,8 +128,6 @@ class ApplicationDataService {
             'paybackName': item['payback_name']?.toString() ?? '',
             'paybackNumber': item['payback_num']?.toString() ?? '',
             'academicStatus': item['academic_status']?.toString() ?? '',
-            // 지원생구분 추가 (recruit_type 기반으로 설정)
-            'applicant_type': item['recruit_type']?.toString() ?? '',
             // 국적 정보 (외국인/내국인 기반)
             'nationality':
                 item['recruit_type']?.toString() == '외국인' ? '외국인' : '대한민국',
@@ -160,10 +157,6 @@ class ApplicationDataService {
                 item['phone_num']?.toString() ??
                 '',
             'tel_home': item['tel_home']?.toString() ?? '',
-            // 환불 정보 (ad_room_status.dart 호환)
-            'bank': item['payback_bank']?.toString() ?? '',
-            'account_num': item['payback_num']?.toString() ?? '',
-            'account_holder': item['payback_name']?.toString() ?? '',
           };
 
           // 디버깅: 매핑된 documents 필드 출력
@@ -439,6 +432,46 @@ class ApplicationDataService {
     } catch (e) {
       log('배정 취소 실패: $e');
       throw Exception('배정을 취소할 수 없습니다: $e');
+    }
+  }
+
+  /// 룸메이트 쌍 배정 취소
+  static Future<void> cancelRoommateAssignment(
+    String student1Id,
+    String student2Id,
+  ) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$_baseUrl/api/admin/cancel-pair-assignment'),
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode({
+          'student1_id': student1Id,
+          'student2_id': student2Id,
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        // 로컬 데이터 업데이트 - 두 학생 모두 처리
+        for (String studentId in [student1Id, student2Id]) {
+          final student = applications.firstWhere(
+            (app) => app['studentId'] == studentId,
+            orElse: () => {},
+          );
+          if (student.isNotEmpty) {
+            student['assignedBuilding'] = null;
+            student['assignedRoomNumber'] = null;
+            student['status'] = '확인';
+          }
+        }
+
+        // 방 점유율 업데이트
+        await updateRoomOccupancy();
+      } else {
+        throw Exception('룸메이트 쌍 배정 취소 실패: ${response.statusCode}');
+      }
+    } catch (e) {
+      log('룸메이트 쌍 배정 취소 실패: $e');
+      throw Exception('룸메이트 쌍 배정을 취소할 수 없습니다: $e');
     }
   }
 

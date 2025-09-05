@@ -739,7 +739,7 @@ class _AdDinnerPageState extends State<AdDinnerPage> {
         headerRowHeight: 48.h,
         gridLinesVisibility: GridLinesVisibility.horizontal,
         headerGridLinesVisibility: GridLinesVisibility.horizontal,
-        allowSorting: true,
+        allowSorting: false,
       ),
     );
   }
@@ -754,27 +754,27 @@ class _AdDinnerPageState extends State<AdDinnerPage> {
       GridColumn(
         columnName: 'yearSemester',
         label: _buildHeaderCell('년도/학기', headerStyle),
-        allowSorting: true,
+        allowSorting: false,
       ),
       GridColumn(
         columnName: 'month',
         label: _buildHeaderCell('신청월', headerStyle),
-        allowSorting: true,
+        allowSorting: false,
       ),
       GridColumn(
         columnName: 'studentId',
         label: _buildHeaderCell('학번', headerStyle),
-        allowSorting: true,
+        allowSorting: false,
       ),
       GridColumn(
         columnName: 'studentName',
         label: _buildHeaderCell('이름', headerStyle),
-        allowSorting: true,
+        allowSorting: false,
       ),
       GridColumn(
         columnName: 'dormInfo',
         label: _buildHeaderCell('건물/호실', headerStyle),
-        allowSorting: true,
+        allowSorting: false,
       ),
       GridColumn(
         columnName: 'amount',
@@ -783,17 +783,17 @@ class _AdDinnerPageState extends State<AdDinnerPage> {
           headerStyle,
           alignment: Alignment.centerRight,
         ),
-        allowSorting: true,
+        allowSorting: false,
       ),
       GridColumn(
         columnName: 'status',
         label: _buildHeaderCell('상태', headerStyle),
-        allowSorting: true,
+        allowSorting: false,
       ),
       GridColumn(
         columnName: 'processedDate',
         label: _buildHeaderCell('처리일자', headerStyle),
-        allowSorting: true,
+        allowSorting: false,
       ),
     ];
   }

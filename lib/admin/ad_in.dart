@@ -472,12 +472,37 @@ class _AdInPageState extends State<AdInPage>
     );
 
     try {
-      // 1. 서버 API 호출로 DB에서 배정 취소
-      print('📡 서버 API 호출 중...');
-      await ApplicationDataService.cancelAssignment(studentApp['studentId']);
-      print('✅ 서버 배정 취소 완료');
+      // 1. 룸메이트 파트너 확인
+      Map<String, dynamic>? partner;
+      if (studentApp['pairId'] != null) {
+        try {
+          partner = ApplicationDataService.applications.firstWhere(
+            (app) =>
+                app['pairId'] == studentApp['pairId'] &&
+                app['id'] != studentApp['id'],
+          );
+          print('📍 룸메이트 파트너 찾음: ${partner['studentName']}');
+        } catch (e) {
+          print("❌ 룸메이트 파트너를 찾을 수 없습니다: $e");
+        }
+      }
 
-      // 2. 클라이언트 상태 업데이트
+      // 2. 서버 API 호출 - 룸메이트인 경우 쌍 취소, 아니면 개별 취소
+      print('📡 서버 API 호출 중...');
+      if (partner != null) {
+        // 룸메이트 쌍 취소 API 사용
+        await ApplicationDataService.cancelRoommateAssignment(
+          studentApp['studentId'],
+          partner['studentId'],
+        );
+        print('✅ 룸메이트 쌍 서버 배정 취소 완료');
+      } else {
+        // 개별 취소 API 사용
+        await ApplicationDataService.cancelAssignment(studentApp['studentId']);
+        print('✅ 개별 서버 배정 취소 완료');
+      }
+
+      // 3. 클라이언트 상태 업데이트
       setState(() {
         var mainStudent = ApplicationDataService.applications.firstWhere(
           (app) => app['id'] == studentApp['id'],
@@ -486,20 +511,11 @@ class _AdInPageState extends State<AdInPage>
         print('📍 메인 학생 찾음: ${mainStudent['studentName']}');
 
         // 룸메이트가 있는 경우 파트너도 함께 처리
-        if (mainStudent['pairId'] != null) {
-          try {
-            var partner = ApplicationDataService.applications.firstWhere(
-              (app) =>
-                  app['pairId'] == mainStudent['pairId'] &&
-                  app['id'] != mainStudent['id'],
-            );
-            print('📍 파트너 찾음: ${partner['studentName']}');
-            partner['assignedBuilding'] = null;
-            partner['assignedRoomNumber'] = null;
-            partner['status'] = '확인';
-          } catch (e) {
-            print("❌ 배정 취소 중 파트너를 찾을 수 없습니다: $e");
-          }
+        if (partner != null) {
+          print('📍 파트너 상태 업데이트: ${partner['studentName']}');
+          partner['assignedBuilding'] = null;
+          partner['assignedRoomNumber'] = null;
+          partner['status'] = '확인';
         }
 
         // 메인 학생 배정 취소
@@ -510,10 +526,10 @@ class _AdInPageState extends State<AdInPage>
         print('✅ 클라이언트 상태 업데이트 완료');
       });
 
-      // 3. 방 점유율 업데이트
+      // 4. 방 점유율 업데이트
       await ApplicationDataService.updateRoomOccupancy();
 
-      // 4. UI 새로고침
+      // 5. UI 새로고침
       setState(() => _updateSelection());
 
       print('✅ 배정 취소 완료');
@@ -636,9 +652,209 @@ class _AdInPageState extends State<AdInPage>
                     color: AppColors.fontPrimary,
                   ),
                 ),
-                content: Text(
-                  result['message'] ?? '방 배정이 완료되었습니다.',
-                  style: TextStyle(color: AppColors.fontSecondary),
+                content: SizedBox(
+                  width: 600.w,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '자동배정이 완료되었습니다.\n',
+                        style: TextStyle(
+                          fontSize: 16.sp,
+                          color: AppColors.fontPrimary,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.assignment_turned_in,
+                            size: 18.sp,
+                            color: AppColors.statusConfirmed,
+                          ),
+                          SizedBox(width: 8.w),
+                          Expanded(
+                            child: Text(
+                              '배정 결과: ${result['assigned_count'] ?? '알 수 없음'}명 배정 완료',
+                              style: TextStyle(
+                                fontSize: 14.sp,
+                                color: AppColors.fontSecondary,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      SizedBox(height: 8.h),
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.rule,
+                            size: 18.sp,
+                            color: AppColors.primary,
+                          ),
+                          SizedBox(width: 8.w),
+                          Expanded(
+                            child: Text(
+                              '적용된 조건:',
+                              style: TextStyle(
+                                fontSize: 14.sp,
+                                color: AppColors.fontSecondary,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      SizedBox(height: 4.h),
+                      Padding(
+                        padding: EdgeInsets.only(left: 26.w),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Icon(
+                                  Icons.check_circle_outline,
+                                  size: 16.sp,
+                                  color: AppColors.statusConfirmed,
+                                ),
+                                SizedBox(width: 6.w),
+                                Expanded(
+                                  child: Text(
+                                    '성별 매칭 (건물별 기준)',
+                                    style: TextStyle(
+                                      fontSize: 13.sp,
+                                      color: AppColors.fontSecondary,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            SizedBox(height: 2.h),
+                            Row(
+                              children: [
+                                Icon(
+                                  Icons.check_circle_outline,
+                                  size: 16.sp,
+                                  color: AppColors.statusConfirmed,
+                                ),
+                                SizedBox(width: 6.w),
+                                Expanded(
+                                  child: Text(
+                                    '층별 방타입 매칭 (6층=1인실, 7층=2인실, 8층=3인실, 9층=룸메이트)',
+                                    style: TextStyle(
+                                      fontSize: 13.sp,
+                                      color: AppColors.fontSecondary,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            SizedBox(height: 2.h),
+                            Row(
+                              children: [
+                                Icon(
+                                  Icons.check_circle_outline,
+                                  size: 16.sp,
+                                  color: AppColors.statusConfirmed,
+                                ),
+                                SizedBox(width: 6.w),
+                                Expanded(
+                                  child: Text(
+                                    '10층 방학이용층 제외',
+                                    style: TextStyle(
+                                      fontSize: 13.sp,
+                                      color: AppColors.fontSecondary,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            SizedBox(height: 2.h),
+                            Row(
+                              children: [
+                                Icon(
+                                  Icons.check_circle_outline,
+                                  size: 16.sp,
+                                  color: AppColors.statusConfirmed,
+                                ),
+                                SizedBox(width: 6.w),
+                                Expanded(
+                                  child: Text(
+                                    '실시간 점유 확인',
+                                    style: TextStyle(
+                                      fontSize: 13.sp,
+                                      color: AppColors.fontSecondary,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            SizedBox(height: 2.h),
+                            Row(
+                              children: [
+                                Icon(
+                                  Icons.check_circle_outline,
+                                  size: 16.sp,
+                                  color: AppColors.statusConfirmed,
+                                ),
+                                SizedBox(width: 6.w),
+                                Expanded(
+                                  child: Text(
+                                    '흡연여부 매칭 (1~5호 흡연 허용)',
+                                    style: TextStyle(
+                                      fontSize: 13.sp,
+                                      color: AppColors.fontSecondary,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            SizedBox(height: 2.h),
+                            Row(
+                              children: [
+                                Icon(
+                                  Icons.check_circle_outline,
+                                  size: 16.sp,
+                                  color: AppColors.statusConfirmed,
+                                ),
+                                SizedBox(width: 6.w),
+                                Expanded(
+                                  child: Text(
+                                    '국적 분리 (내국인-외국인)',
+                                    style: TextStyle(
+                                      fontSize: 13.sp,
+                                      color: AppColors.fontSecondary,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            SizedBox(height: 2.h),
+                            Row(
+                              children: [
+                                Icon(
+                                  Icons.check_circle_outline,
+                                  size: 16.sp,
+                                  color: AppColors.statusConfirmed,
+                                ),
+                                SizedBox(width: 6.w),
+                                Expanded(
+                                  child: Text(
+                                    '룸메이트 신청 관계',
+                                    style: TextStyle(
+                                      fontSize: 13.sp,
+                                      color: AppColors.fontSecondary,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
                 actions: [
                   ElevatedButton(
@@ -2025,49 +2241,30 @@ class _AdInPageState extends State<AdInPage>
                   onTap: () => _showDocumentPreviewDialog(studentApp, doc),
                   child: Container(
                     padding: EdgeInsets.symmetric(
-                      horizontal: 8.w,
-                      vertical: 4.h,
+                      horizontal: 12.w,
+                      vertical: 6.h,
                     ),
                     decoration: BoxDecoration(
                       color:
-                          isVerified
-                              ? AppColors.statusConfirmed.withOpacity(0.1)
-                              : AppColors.statusWaiting.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(12.r),
+                          isVerified ? AppColors.statusConfirmed : Colors.white,
+                      borderRadius: BorderRadius.circular(20.r),
                       border: Border.all(
                         color:
                             isVerified
                                 ? AppColors.statusConfirmed
-                                : AppColors.statusWaiting,
+                                : AppColors.border,
                         width: 1,
                       ),
                     ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          isVerified ? Icons.check_circle : Icons.visibility,
-                          size: 12.sp,
-                          color:
-                              isVerified
-                                  ? AppColors.statusConfirmed
-                                  : AppColors.statusWaiting,
-                        ),
-                        SizedBox(width: 4.w),
-                        Text(
-                          isVerified ? '확인완료' : '확인',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            fontSize: 11.sp,
-                            color:
-                                isVerified
-                                    ? AppColors.statusConfirmed
-                                    : AppColors.statusWaiting,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ],
+                    child: Text(
+                      isVerified ? '확인' : '확인',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 12.sp,
+                        color:
+                            isVerified ? Colors.white : AppColors.fontPrimary,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                   ),
                 ),
@@ -2229,24 +2426,28 @@ class _AdInPageState extends State<AdInPage>
                   borderRadius: BorderRadius.circular(8.r),
                   border: Border.all(color: AppColors.statusConfirmed),
                 ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      Icons.check_circle,
-                      size: 16.sp,
+                child: Container(
+                  padding: EdgeInsets.symmetric(
+                    horizontal: 12.w,
+                    vertical: 6.h,
+                  ),
+                  decoration: BoxDecoration(
+                    color: AppColors.statusConfirmed,
+                    borderRadius: BorderRadius.circular(20.r),
+                    border: Border.all(
                       color: AppColors.statusConfirmed,
+                      width: 1,
                     ),
-                    SizedBox(width: 4.w),
-                    Text(
-                      '확인완료',
-                      style: TextStyle(
-                        color: AppColors.statusConfirmed,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 14.sp,
-                      ),
+                  ),
+                  child: Text(
+                    '확인',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 12.sp,
+                      color: Colors.white,
+                      fontWeight: FontWeight.w600,
                     ),
-                  ],
+                  ),
                 ),
               )
             else
