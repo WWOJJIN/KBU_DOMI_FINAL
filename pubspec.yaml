@@ -39,6 +39,8 @@ dependencies:
   flutter_localizations: 
     sdk: flutter
   geolocator: ^11.0.0
+  shared_preferences: ^2.2.2
+  crypto: ^3.0.3
 
 
 

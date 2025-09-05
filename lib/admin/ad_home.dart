@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../services/storage_service.dart';
 import 'ad_overnight.dart'; // 외박관리
 import 'ad_as.dart'; // AS신청관리
 import 'ad_dinner.dart'; // 석식관리
@@ -24,6 +25,31 @@ class _AdHomePageState extends State<AdHomePage> {
   int _selectedMenu = 0;
   final Color kbuBlue = const Color(0xFF00408B);
   final Color kbuPink = const Color(0xFFEC008C);
+
+  // Arguments for specific pages
+  Map<String, dynamic>? _adRoomStatusPageArguments;
+  Map<String, dynamic>? _adInPageArguments;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadSavedPageIndex();
+  }
+
+  /// 저장된 페이지 인덱스 로드
+  Future<void> _loadSavedPageIndex() async {
+    try {
+      final savedIndex = await StorageService.getAdminPageIndex();
+      if (mounted && savedIndex >= 0 && savedIndex < _menuList.length) {
+        setState(() {
+          _selectedMenu = savedIndex;
+        });
+        print('관리자 페이지 복원: $_selectedMenu');
+      }
+    } catch (e) {
+      print('관리자 페이지 인덱스 로드 실패: $e');
+    }
+  }
 
   // 메뉴 항목 및 연결 페이지 (원래 방식으로 복원)
   final List<Map<String, dynamic>> _menuList = [
@@ -81,9 +107,6 @@ class _AdHomePageState extends State<AdHomePage> {
     // {"icon": Icons.search, "title": "학생조회", "page": () => SearchPage()},
   ];
 
-  Map<String, dynamic>? _adInPageArguments;
-  Map<String, dynamic>? _adRoomStatusPageArguments;
-
   // 외부에서 메뉴를 변경하고 필요한 인자를 전달받을 수 있는 Public 메서드
   void selectMenuByIndex(int index, {Map<String, dynamic>? arguments}) {
     setState(() {
@@ -96,6 +119,18 @@ class _AdHomePageState extends State<AdHomePage> {
         _adInPageArguments = arguments;
       }
     });
+
+    // 페이지 인덱스를 로컬 저장소에 저장
+    _savePageIndex(index);
+  }
+
+  /// 페이지 인덱스 저장
+  Future<void> _savePageIndex(int index) async {
+    try {
+      await StorageService.saveAdminPageIndex(index);
+    } catch (e) {
+      print('관리자 페이지 인덱스 저장 실패: $e');
+    }
   }
 
   // 외부에서 _menuList의 인덱스를 찾을 수 있도록 Public 메서드 추가

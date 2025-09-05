@@ -867,7 +867,10 @@ class _CheckoutApplyPageState extends State<CheckoutApplyPage> {
                             Expanded(
                               flex: 1,
                               child: ElevatedButton(
-                                onPressed: _selectCheckoutDate,
+                                onPressed:
+                                    _hasExistingRequest()
+                                        ? null
+                                        : _selectCheckoutDate,
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor: Colors.white,
                                   foregroundColor:
@@ -913,7 +916,10 @@ class _CheckoutApplyPageState extends State<CheckoutApplyPage> {
                                 '퇴실 사유',
                                 selectedReason ?? '',
                                 reasonOptions,
-                                (val) => setState(() => selectedReason = val),
+                                _hasExistingRequest()
+                                    ? null
+                                    : (val) =>
+                                        setState(() => selectedReason = val),
                                 errorMessage: reasonError,
                               ),
                             ),
@@ -926,6 +932,7 @@ class _CheckoutApplyPageState extends State<CheckoutApplyPage> {
                           '퇴실 사유 상세 설명',
                           reasonController,
                           required: true,
+                          enabled: !_hasExistingRequest(),
                         ),
 
                         // 기타 사유 입력 필드
@@ -936,6 +943,7 @@ class _CheckoutApplyPageState extends State<CheckoutApplyPage> {
                               '기타 사유 입력',
                               etcReasonController,
                               required: true,
+                              enabled: !_hasExistingRequest(),
                               errorMessage:
                                   (selectedReason == '기타' &&
                                           reasonError != null)
@@ -958,12 +966,16 @@ class _CheckoutApplyPageState extends State<CheckoutApplyPage> {
                         SizedBox(height: 12.h),
                         CheckboxListTile(
                           value: agreePrivacy,
-                          onChanged: (val) {
-                            setState(() {
-                              agreePrivacy = val ?? false;
-                              if (agreePrivacy) agreePrivacyError = null;
-                            });
-                          },
+                          onChanged:
+                              _hasExistingRequest()
+                                  ? null
+                                  : (val) {
+                                    setState(() {
+                                      agreePrivacy = val ?? false;
+                                      if (agreePrivacy)
+                                        agreePrivacyError = null;
+                                    });
+                                  },
                           title: Text(
                             '[필수] 개인정보 수집 및 이용에 동의합니다.',
                             style: TextStyle(
@@ -1025,6 +1037,7 @@ class _CheckoutApplyPageState extends State<CheckoutApplyPage> {
                                 '비상 연락처',
                                 emergencyContactController,
                                 required: true,
+                                enabled: !_hasExistingRequest(),
                                 errorMessage: emergencyContactError,
                               ),
                             ),
@@ -1035,13 +1048,16 @@ class _CheckoutApplyPageState extends State<CheckoutApplyPage> {
                                 children: [
                                   Checkbox(
                                     value: guardianAgree,
-                                    onChanged: (val) {
-                                      setState(() {
-                                        guardianAgree = val!;
-                                        if (guardianAgree)
-                                          guardianAgreeError = null;
-                                      });
-                                    },
+                                    onChanged:
+                                        _hasExistingRequest()
+                                            ? null
+                                            : (val) {
+                                              setState(() {
+                                                guardianAgree = val!;
+                                                if (guardianAgree)
+                                                  guardianAgreeError = null;
+                                              });
+                                            },
                                   ),
                                   Text(
                                     '보호자 동의',
@@ -1073,7 +1089,9 @@ class _CheckoutApplyPageState extends State<CheckoutApplyPage> {
                           '은행명',
                           selectedBank ?? '',
                           banks,
-                          (val) => setState(() => selectedBank = val),
+                          _hasExistingRequest()
+                              ? null
+                              : (val) => setState(() => selectedBank = val),
                           errorMessage: bankError,
                         ),
                         if (isRefundInfoChanged())
@@ -1092,6 +1110,7 @@ class _CheckoutApplyPageState extends State<CheckoutApplyPage> {
                           '계좌번호',
                           accountController,
                           required: true,
+                          enabled: !_hasExistingRequest(),
                           errorMessage: accountError,
                         ),
                         SizedBox(height: 8.h),
@@ -1099,6 +1118,7 @@ class _CheckoutApplyPageState extends State<CheckoutApplyPage> {
                           '예금주',
                           accountHolderController,
                           required: true,
+                          enabled: !_hasExistingRequest(),
                           errorMessage: accountHolderError,
                         ),
 
@@ -1114,16 +1134,19 @@ class _CheckoutApplyPageState extends State<CheckoutApplyPage> {
                         SizedBox(height: 12.h),
                         CheckboxListTile(
                           value: checklistClean,
-                          onChanged: (val) {
-                            setState(() {
-                              checklistClean = val ?? false;
-                              if (checklistClean &&
-                                  checklistKey &&
-                                  checklistBill) {
-                                checklistError = null;
-                              }
-                            });
-                          },
+                          onChanged:
+                              _hasExistingRequest()
+                                  ? null
+                                  : (val) {
+                                    setState(() {
+                                      checklistClean = val ?? false;
+                                      if (checklistClean &&
+                                          checklistKey &&
+                                          checklistBill) {
+                                        checklistError = null;
+                                      }
+                                    });
+                                  },
                           title: Text(
                             '방 청소 완료',
                             style: TextStyle(
@@ -1135,16 +1158,19 @@ class _CheckoutApplyPageState extends State<CheckoutApplyPage> {
                         ),
                         CheckboxListTile(
                           value: checklistKey,
-                          onChanged: (val) {
-                            setState(() {
-                              checklistKey = val ?? false;
-                              if (checklistClean &&
-                                  checklistKey &&
-                                  checklistBill) {
-                                checklistError = null;
-                              }
-                            });
-                          },
+                          onChanged:
+                              _hasExistingRequest()
+                                  ? null
+                                  : (val) {
+                                    setState(() {
+                                      checklistKey = val ?? false;
+                                      if (checklistClean &&
+                                          checklistKey &&
+                                          checklistBill) {
+                                        checklistError = null;
+                                      }
+                                    });
+                                  },
                           title: Text(
                             '열쇠 반납 완료',
                             style: TextStyle(
@@ -1156,16 +1182,19 @@ class _CheckoutApplyPageState extends State<CheckoutApplyPage> {
                         ),
                         CheckboxListTile(
                           value: checklistBill,
-                          onChanged: (val) {
-                            setState(() {
-                              checklistBill = val ?? false;
-                              if (checklistClean &&
-                                  checklistKey &&
-                                  checklistBill) {
-                                checklistError = null;
-                              }
-                            });
-                          },
+                          onChanged:
+                              _hasExistingRequest()
+                                  ? null
+                                  : (val) {
+                                    setState(() {
+                                      checklistBill = val ?? false;
+                                      if (checklistClean &&
+                                          checklistKey &&
+                                          checklistBill) {
+                                        checklistError = null;
+                                      }
+                                    });
+                                  },
                           title: Text(
                             '공과금 정산 완료',
                             style: TextStyle(
@@ -1362,7 +1391,7 @@ class _CheckoutApplyPageState extends State<CheckoutApplyPage> {
     String label,
     String value,
     List<String> options,
-    ValueChanged<String?> onChanged, {
+    ValueChanged<String?>? onChanged, {
     String? errorMessage,
   }) => DropdownButtonFormField2<String>(
     isExpanded: true,
@@ -1400,14 +1429,17 @@ class _CheckoutApplyPageState extends State<CheckoutApplyPage> {
               ),
             )
             .toList(),
-    onChanged: (newValue) {
-      onChanged(newValue);
-      // 선택 시 에러 상태 초기화
-      setState(() {
-        if (label.contains('은행')) bankError = null;
-        if (label.contains('사유')) reasonError = null;
-      });
-    },
+    onChanged:
+        onChanged != null
+            ? (newValue) {
+              onChanged(newValue);
+              // 선택 시 에러 상태 초기화
+              setState(() {
+                if (label.contains('은행')) bankError = null;
+                if (label.contains('사유')) reasonError = null;
+              });
+            }
+            : null,
     buttonStyleData: ButtonStyleData(
       height: 20.h,
       padding: EdgeInsets.only(left: 0, right: 0),
@@ -1428,9 +1460,11 @@ class _CheckoutApplyPageState extends State<CheckoutApplyPage> {
     TextEditingController controller, {
     bool required = false,
     String? errorMessage,
+    bool enabled = true,
   }) => TextField(
     controller: controller,
-    style: TextStyle(fontSize: 14.sp),
+    enabled: enabled,
+    style: TextStyle(fontSize: 14.sp, color: enabled ? null : Colors.grey),
     onChanged: (value) {
       // 입력 시 에러 상태 초기화
       setState(() {
@@ -1481,10 +1515,12 @@ class _CheckoutApplyPageState extends State<CheckoutApplyPage> {
     TextEditingController controller, {
     bool required = false,
     String? errorMessage,
+    bool enabled = true,
   }) => TextField(
     controller: controller,
+    enabled: enabled,
     maxLines: 5,
-    style: TextStyle(fontSize: 14.sp),
+    style: TextStyle(fontSize: 14.sp, color: enabled ? null : Colors.grey),
     decoration: InputDecoration(
       hintText: hint,
       // 에러 상태일 때 빨간 테두리, 정상일 때 기본 테두리
@@ -1657,7 +1693,7 @@ class _CheckoutApplyPageState extends State<CheckoutApplyPage> {
           Expanded(
             flex: 1,
             child: InkWell(
-              onTap: pickProofFiles,
+              onTap: _hasExistingRequest() ? null : pickProofFiles,
               child: Container(
                 padding: EdgeInsets.all(16.w),
                 decoration: BoxDecoration(

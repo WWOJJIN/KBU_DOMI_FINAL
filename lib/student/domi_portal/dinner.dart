@@ -17,12 +17,11 @@ class DinnerRequestPage extends StatefulWidget {
 }
 
 class _DinnerRequestPageState extends State<DinnerRequestPage> {
-  String selectedYear = '2025';
-  String selectedSemester = '1학기';
+  // 시스템에서 자동으로 계산되는 고정값 (외박신청과 동일한 로직)
+  final String selectedYear = DateTime.now().year.toString();
+  final String selectedSemester =
+      (DateTime.now().month >= 3 && DateTime.now().month <= 8) ? '1학기' : '2학기';
   final Set<String> selectedMonths = {};
-
-  final List<String> years = ['2024', '2025', '2026'];
-  final List<String> semesters = ['1학기', '2학기'];
 
   // 학기별 월 자동 설정을 위한 getter
   List<String> get months {
@@ -605,7 +604,6 @@ class _DinnerRequestPageState extends State<DinnerRequestPage> {
 
   @override
   Widget build(BuildContext context) {
-    double cardHeight = 320.h;
     return SingleChildScrollView(
       padding: EdgeInsets.all(32.w),
       child: Column(
@@ -615,33 +613,15 @@ class _DinnerRequestPageState extends State<DinnerRequestPage> {
           SizedBox(height: 10.h),
           Row(
             children: [
-              Expanded(
-                child: _dropdown(
-                  '년도',
-                  selectedYear,
-                  years,
-                  (val) => setState(() {
-                    selectedYear = val!;
-                    selectedMonths.clear(); // 년도 변경 시 선택된 월 초기화
-                  }),
-                ),
-              ),
+              Expanded(child: _readOnlyTextField('년도', selectedYear)),
+              SizedBox(width: 8.w),
+              Expanded(child: _readOnlyTextField('학기', selectedSemester)),
               SizedBox(width: 8.w),
               Expanded(
-                child: _dropdown(
-                  '학기',
-                  selectedSemester,
-                  semesters,
-                  (val) => setState(() {
-                    selectedSemester = val!;
-                    selectedMonths.clear(); // 학기 변경 시 선택된 월 초기화
-                  }),
-                ),
+                child: _readOnlyTextField('학번', studentIdController.text),
               ),
               SizedBox(width: 8.w),
-              Expanded(child: _textField('학번', studentIdController)),
-              SizedBox(width: 8.w),
-              Expanded(child: _textField('이름', nameController)),
+              Expanded(child: _readOnlyTextField('이름', nameController.text)),
             ],
           ),
           SizedBox(height: 10.h),
@@ -1069,44 +1049,20 @@ class _DinnerRequestPageState extends State<DinnerRequestPage> {
     ),
   );
 
-  Widget _dropdown(
-    String label,
-    String value,
-    List<String> options,
-    ValueChanged<String?> onChanged,
-  ) {
-    return DropdownButtonFormField<String>(
-      decoration: InputDecoration(
-        labelText: label,
-        isDense: true,
-        contentPadding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 10.h),
-        border: OutlineInputBorder(),
-      ),
-      isExpanded: true,
-      value: value,
-      onChanged: onChanged,
-      items:
-          options
-              .map(
-                (e) => DropdownMenuItem(
-                  value: e,
-                  child: Text(e, style: TextStyle(fontSize: 14.sp)),
-                ),
-              )
-              .toList(),
-    );
-  }
-
-  Widget _textField(String label, TextEditingController controller) {
+  // 읽기 전용 텍스트 필드 (시스템 고정값 표시용)
+  Widget _readOnlyTextField(String label, String value) {
     return TextField(
-      controller: controller,
-      style: TextStyle(fontSize: 14.sp),
+      readOnly: true,
+      style: TextStyle(fontSize: 14.sp, color: Colors.grey[700]),
       decoration: InputDecoration(
         labelText: label,
         isDense: true,
         contentPadding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 10.h),
         border: OutlineInputBorder(),
+        filled: true,
+        fillColor: Colors.grey[100],
       ),
+      controller: TextEditingController(text: value),
     );
   }
 

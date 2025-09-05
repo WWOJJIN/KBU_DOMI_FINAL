@@ -11,6 +11,7 @@ import 'package:kbu_domi/app/app_pm.dart';
 import 'package:kbu_domi/app/app_setting.dart';
 import 'package:kbu_domi/app/app_overnight.dart';
 import 'package:kbu_domi/student_provider.dart';
+import 'package:kbu_domi/services/storage_service.dart';
 
 void main() {
   runApp(const RootApp());
@@ -38,14 +39,82 @@ class RootApp extends StatelessWidget {
 }
 
 // --- 앱 루트 ---
-class MyApp extends StatelessWidget {
+class MyApp extends StatefulWidget {
   const MyApp({super.key});
+
+  @override
+  State<MyApp> createState() => _MyAppState();
+}
+
+class _MyAppState extends State<MyApp> {
+  String _initialRoute = '/login';
+  bool _isInitialized = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkLoginStatus();
+  }
+
+  /// 로그인 상태 확인 및 자동 복원
+  Future<void> _checkLoginStatus() async {
+    try {
+      final studentProvider = Provider.of<StudentProvider>(
+        context,
+        listen: false,
+      );
+      final isLoggedIn = await studentProvider.isLoggedIn();
+
+      if (isLoggedIn) {
+        final restored = await studentProvider.loadFromStorage();
+        if (restored) {
+          print('✅ 자동 로그인 복원 성공');
+          setState(() {
+            _initialRoute = '/home';
+            _isInitialized = true;
+          });
+          return;
+        }
+      }
+
+      print('🔑 로그인 필요');
+      setState(() {
+        _initialRoute = '/login';
+        _isInitialized = true;
+      });
+    } catch (e) {
+      print('자동 로그인 확인 실패: $e');
+      setState(() {
+        _initialRoute = '/login';
+        _isInitialized = true;
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    if (!_isInitialized) {
+      // 로딩 화면 표시
+      return MaterialApp(
+        home: Scaffold(
+          body: Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                CircularProgressIndicator(),
+                SizedBox(height: 16),
+                Text('앱을 준비하고 있습니다...'),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
     return MaterialApp(
       title: 'KBU Dormitory',
       debugShowCheckedModeBanner: false,
-      initialRoute: '/login',
+      initialRoute: _initialRoute,
       routes: {
         '/login': (context) => const AppLogin(),
         '/home': (context) => HomeShell(),
@@ -408,6 +477,21 @@ class _HomeShellState extends State<HomeShell> {
   int _selectedIndex = 2; // 홈
   VoidCallback? _homeRefreshCallback;
 
+  /// 저장된 페이지 인덱스 로드
+  Future<void> _loadSavedPageIndex() async {
+    try {
+      final savedIndex = await StorageService.getStudentPageIndex();
+      if (mounted && savedIndex >= 0 && savedIndex < _labels.length) {
+        setState(() {
+          _selectedIndex = savedIndex;
+        });
+        print('학생 페이지 복원: $_selectedIndex');
+      }
+    } catch (e) {
+      print('학생 페이지 인덱스 로드 실패: $e');
+    }
+  }
+
   static const List<String> _labels = [
     'A/S 신청',
     '외박 신청',
@@ -432,6 +516,9 @@ class _HomeShellState extends State<HomeShell> {
     super.initState();
     print('🔔 HomeShell initState 시작');
 
+    // 저장된 페이지 인덱스 로드
+    _loadSavedPageIndex();
+
     // 앱 시작 시 알림 로드 (더 늦은 시점에 실행)
     WidgetsBinding.instance.addPostFrameCallback((_) {
       print('🔔 PostFrameCallback 실행');
@@ -449,6 +536,9 @@ class _HomeShellState extends State<HomeShell> {
       _selectedIndex = index;
     });
 
+    // 페이지 인덱스를 로컬 저장소에 저장
+    _savePageIndex(index);
+
     // 홈 탭이 선택되었을 때 홈 화면 데이터 새로고침
     if (index == 2 && _homeRefreshCallback != null) {
       print('🔄 홈 탭 선택됨 - 데이터 새로고침 요청');
@@ -456,10 +546,21 @@ class _HomeShellState extends State<HomeShell> {
     }
   }
 
+  /// 페이지 인덱스 저장
+  Future<void> _savePageIndex(int index) async {
+    try {
+      await StorageService.saveStudentPageIndex(index);
+    } catch (e) {
+      print('학생 페이지 인덱스 저장 실패: $e');
+    }
+  }
+
   void _onHomeCardTap(int index) {
     setState(() {
       _selectedIndex = index;
     });
+    // 홈 카드 클릭 시에도 페이지 인덱스 저장
+    _savePageIndex(index);
   }
 
   // 서버에서 알림 데이터 로드하는 메서드

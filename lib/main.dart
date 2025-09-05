@@ -12,6 +12,7 @@ import 'student/first.dart';
 import 'student/firstin.dart';
 import 'package:provider/provider.dart';
 import 'student_provider.dart';
+import 'services/storage_service.dart';
 import 'admin/ad_as.dart'; // AS신청관리 페이지
 import 'admin/ad_overnight.dart'; // 외박관리 페이지
 import 'admin/ad_dinner.dart'; // 석식관리 페이지
