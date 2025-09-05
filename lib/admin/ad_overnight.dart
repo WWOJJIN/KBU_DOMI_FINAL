@@ -1,15 +1,18 @@
 // 파일명: ad_overnight_page.dart
-// [수정] 통계 카드의 '승인', '반려' 상태 색상을 변경했습니다.
+// 변경사항
+// - 상단 패딩/간격을 '점호관리(ad_jumho.dart)'와 동일 톤으로 정리 (상단 여백 줄임)
+// - 헤더(외박 신청 관리)와 통계 카드 레이아웃/여백, 카드 높이/너비를 맞춤
+// - 통계 카드 클릭 시 상태 필터와 드롭다운 동기화(유지)
 
+import 'dart:convert';
 import 'dart:ui';
 import 'package:flutter/material.dart';
-import 'package:syncfusion_flutter_datagrid/datagrid.dart';
-import 'package:syncfusion_flutter_core/theme.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:dropdown_button2/dropdown_button2.dart';
 import 'package:intl/intl.dart';
 import 'package:http/http.dart' as http;
-import 'dart:convert';
-import 'package:dropdown_button2/dropdown_button2.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:syncfusion_flutter_core/theme.dart';
+import 'package:syncfusion_flutter_datagrid/datagrid.dart';
 
 class AdOvernightPage extends StatefulWidget {
   const AdOvernightPage({super.key});
@@ -22,24 +25,27 @@ class _AdOvernightPageState extends State<AdOvernightPage> {
   OvernightDataSource? _overnightDataSource;
   final List<OvernightRequest> _overnightRequests = [];
   List<OvernightRequest> _filteredRequests = [];
-  final Set<String> _selectedUuids = {}; // 체크된 신청 uuid
+  final Set<String> _selectedUuids = {};
   bool _isLoading = true;
+
+  // ▼ 필터 상태(통계 카드/드롭다운 공유)
   String _selectedStatus = '전체';
   String _selectedBuilding = '전체';
+
   String _bulkStatus = '상태 변경';
   final TextEditingController _searchController = TextEditingController();
   final TextEditingController _rejectionReasonController =
       TextEditingController();
   String? _expandedRowUuid;
 
-  // 행별 확장 가능 여부 저장
+  // 확장 가능 여부
   final Map<String, bool> _isRowExpandable = {};
 
-  // 통계 정보 추가
+  // 통계
   Map<String, int> _statusCounts = {};
   int _totalRequests = 0;
 
-  // 공지사항 관련 변수 추가
+  // 공지
   Map<String, dynamic>? _notice;
   final TextEditingController _noticeContentController =
       TextEditingController();
@@ -48,64 +54,41 @@ class _AdOvernightPageState extends State<AdOvernightPage> {
   static const List<String> _buildingList = ['전체', '숭례원', '양덕원'];
   static const List<String> _bulkStatusList = ['승인', '대기', '반려'];
 
+  // 카드 공통 스타일(점호관리와 동일 톤)
+  final BorderRadius _cardRadius = BorderRadius.circular(12.r);
+  final List<BoxShadow> _cardShadow = [
+    BoxShadow(
+      color: Colors.black.withOpacity(0.05),
+      blurRadius: 10,
+      offset: const Offset(0, 4),
+    ),
+  ];
+
   @override
   void initState() {
     super.initState();
     _loadOvernightRequests();
-    _loadNotice(); // 공지사항 로드 추가
+    _loadNotice();
   }
 
   @override
   void dispose() {
     _searchController.dispose();
     _rejectionReasonController.dispose();
-    _noticeContentController.dispose(); // 공지사항 컨트롤러 해제 추가
+    _noticeContentController.dispose();
     super.dispose();
   }
 
-  // 샘플 데이터 추가
-  Future<void> _addSampleData() async {
-    try {
-      final response = await http.post(
-        Uri.parse('http://localhost:5050/api/admin/overnight/sample-data'),
-        headers: {'Content-Type': 'application/json'},
-      );
-
-      if (response.statusCode == 200) {
-        final data = json.decode(utf8.decode(response.bodyBytes));
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(data['message']),
-            backgroundColor: Colors.green,
-          ),
-        );
-        _loadOvernightRequests();
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('샘플 데이터 추가에 실패했습니다.'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('네트워크 오류: $e'), backgroundColor: Colors.red),
-      );
-    }
-  }
-
-  // 통계 계산
   void _calculateStatistics() {
     _statusCounts.clear();
     _totalRequests = _overnightRequests.length;
 
     for (final request in _overnightRequests) {
-      _statusCounts[request.status] = (_statusCounts[request.status] ?? 0) + 1;
+      final key = request.status == '대기중' ? '대기' : request.status;
+      _statusCounts[key] = (_statusCounts[key] ?? 0) + 1;
     }
   }
 
-  // 공지사항 로드
   Future<void> _loadNotice() async {
     try {
       final response = await http.get(
@@ -118,12 +101,11 @@ class _AdOvernightPageState extends State<AdOvernightPage> {
           _noticeContentController.text = data['content'] ?? '';
         });
       }
-    } catch (e) {
-      print('외박 공지사항 로딩 실패: $e');
+    } catch (_) {
+      /* ignore */
     }
   }
 
-  // 공지사항 저장
   Future<void> _saveNotice(String content) async {
     try {
       final isUpdate = _notice != null && _notice!['id'] != null;
@@ -192,6 +174,14 @@ class _AdOvernightPageState extends State<AdOvernightPage> {
     }
   }
 
+  // 통계 카드 클릭 → 필터 반영(드롭다운 동기화)
+  void _onStatTap(String statusLabel) {
+    setState(() {
+      _selectedStatus = statusLabel;
+      _applyFilter();
+    });
+  }
+
   void _onRowSelect(String uuid, bool selected) {
     setState(() {
       if (selected) {
@@ -222,7 +212,7 @@ class _AdOvernightPageState extends State<AdOvernightPage> {
       final reason = await _showBulkRejectionDialog();
       if (reason == null) {
         setState(() => _isLoading = false);
-        return; // 사용자가 취소함
+        return;
       }
       for (final uuid in _selectedUuids) {
         await _updateRequestStatus(uuid, _bulkStatus, rejectionReason: reason);
@@ -243,18 +233,19 @@ class _AdOvernightPageState extends State<AdOvernightPage> {
     final search = _searchController.text.trim();
     _filteredRequests =
         _overnightRequests.where((req) {
-          final matchesStatus =
-              _selectedStatus == '전체' || req.status == _selectedStatus;
-          final matchesBuilding =
+          final statusMatch =
+              _selectedStatus == '전체' ||
+              req.status == _selectedStatus ||
+              (_selectedStatus == '대기' && req.status == '대기중');
+          final buildingMatch =
               _selectedBuilding == '전체' || req.building == _selectedBuilding;
           final matchesSearch =
               search.isEmpty ||
               req.studentId.contains(search) ||
               req.name.contains(search);
-          return matchesStatus && matchesBuilding && matchesSearch;
+          return statusMatch && buildingMatch && matchesSearch;
         }).toList();
 
-    // 필터링된 데이터에 대해 확장 가능 여부 계산
     _updateExpandableRows();
 
     setState(() {
@@ -272,7 +263,6 @@ class _AdOvernightPageState extends State<AdOvernightPage> {
 
   void _updateExpandableRows() {
     _isRowExpandable.clear();
-    // 글자 수를 기반으로 확장 가능 여부 판단 (한 줄에 약 20자 가정)
     const int reasonMaxChars = 20;
     const int rejectionReasonMaxChars = 15;
 
@@ -316,10 +306,10 @@ class _AdOvernightPageState extends State<AdOvernightPage> {
       context: context,
       builder:
           (context) => AlertDialog(
-            title: Text('일괄 반려 사유 입력'),
+            title: const Text('일괄 반려 사유 입력'),
             content: TextField(
               controller: _rejectionReasonController,
-              decoration: InputDecoration(
+              decoration: const InputDecoration(
                 labelText: '반려 사유',
                 hintText: '모든 선택된 항목에 동일한 사유가 적용됩니다.',
                 border: OutlineInputBorder(),
@@ -329,13 +319,13 @@ class _AdOvernightPageState extends State<AdOvernightPage> {
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(context),
-                child: Text('취소'),
+                child: const Text('취소'),
               ),
               ElevatedButton(
                 onPressed: () {
                   Navigator.pop(context, _rejectionReasonController.text);
                 },
-                child: Text('확인'),
+                child: const Text('확인'),
               ),
             ],
           ),
@@ -416,15 +406,15 @@ class _AdOvernightPageState extends State<AdOvernightPage> {
                             width: 1,
                           ),
                         ),
-                        focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12.r),
+                        focusedBorder: const OutlineInputBorder(
+                          borderRadius: BorderRadius.all(Radius.circular(12)),
                           borderSide: BorderSide(
                             color: Colors.blueAccent,
                             width: 1.5,
                           ),
                         ),
                       ),
-                      value: newStatus,
+                      value: (newStatus == '대기중') ? '대기' : newStatus,
                       items:
                           ['대기', '승인', '반려']
                               .map(
@@ -528,7 +518,7 @@ class _AdOvernightPageState extends State<AdOvernightPage> {
                                     ? _rejectionReasonController.text
                                     : null,
                           );
-                          await _loadOvernightRequests(); // 데이터 다시 로드
+                          await _loadOvernightRequests();
                           ScaffoldMessenger.of(context).showSnackBar(
                             const SnackBar(content: Text('상태가 업데이트되었습니다.')),
                           );
@@ -552,7 +542,6 @@ class _AdOvernightPageState extends State<AdOvernightPage> {
     );
   }
 
-  // 상세 정보 보기
   void _showDetailDialog(OvernightRequest request) {
     showDialog(
       context: context,
@@ -625,7 +614,7 @@ class _AdOvernightPageState extends State<AdOvernightPage> {
                   Navigator.pop(context);
                   _showStatusUpdateDialog(request);
                 },
-                child: Text('상태 변경', style: TextStyle(fontSize: 12.sp)),
+                child: Text('상태 변경', style: TextStyle(fontSize: 14.sp)),
               ),
             ],
           ),
@@ -658,6 +647,7 @@ class _AdOvernightPageState extends State<AdOvernightPage> {
       case '반려':
         return Colors.red;
       case '대기':
+      case '대기중':
         return Colors.orange;
       default:
         return Colors.grey;
@@ -671,6 +661,7 @@ class _AdOvernightPageState extends State<AdOvernightPage> {
       case '반려':
         return Icons.cancel;
       case '대기':
+      case '대기중':
         return Icons.schedule;
       default:
         return Icons.help;
@@ -739,14 +730,17 @@ class _AdOvernightPageState extends State<AdOvernightPage> {
 
   @override
   Widget build(BuildContext context) {
+    // 상단 여백을 점호관리와 동일하게: all(24)
     return Scaffold(
       backgroundColor: Colors.white,
       body: Padding(
-        padding: EdgeInsets.symmetric(horizontal: 24.w, vertical: 16.h),
+        padding: EdgeInsets.all(24.w),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _buildHeader(),
+            _buildHeader(), // 헤더
+            SizedBox(height: 16.h),
+            _buildStatisticsCards(), // 통계 카드(높이/너비/여백 동일)
             SizedBox(height: 16.h),
             _buildFilterBar(),
             SizedBox(height: 8.h),
@@ -764,120 +758,174 @@ class _AdOvernightPageState extends State<AdOvernightPage> {
   }
 
   Widget _buildHeader() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+    // 점호관리 헤더와 동일 톤(텍스트 22, 오른쪽 액션)
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
+        Text(
+          '외박 신청 관리',
+          style: TextStyle(fontSize: 22.sp, fontWeight: FontWeight.bold),
+        ),
         Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text(
-              '외박 신청 관리',
-              style: TextStyle(fontSize: 24.sp, fontWeight: FontWeight.bold),
-            ),
-            Row(
-              children: [
-                ElevatedButton.icon(
-                  onPressed: _showNoticeDialog,
-                  icon: Icon(Icons.announcement, size: 16.w),
-                  label: const Text('공지사항 관리'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.orange,
-                    foregroundColor: Colors.white,
-                    elevation: 0,
-                    textStyle: TextStyle(
-                      fontSize: 14.sp,
-                      fontWeight: FontWeight.bold,
-                    ),
-                    padding: EdgeInsets.symmetric(
-                      horizontal: 16.w,
-                      vertical: 10.h,
-                    ),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8.r),
-                    ),
-                  ),
+            // 공지사항 관리 버튼은 유지
+            ElevatedButton.icon(
+              onPressed: _showNoticeDialog,
+              icon: Icon(Icons.announcement, size: 16.w),
+              label: const Text('공지사항 관리'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.white,
+                foregroundColor: Colors.orange,
+                elevation: 0,
+                side: const BorderSide(color: Color(0xFFFFCC80)),
+                textStyle: TextStyle(
+                  fontSize: 14.sp,
+                  fontWeight: FontWeight.bold,
                 ),
-                SizedBox(width: 8.w),
-                ElevatedButton.icon(
-                  onPressed: _loadOvernightRequests,
-                  icon: const Icon(Icons.refresh, size: 16),
-                  label: const Text('새로고침'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.white,
-                    foregroundColor: Colors.blue,
-                    elevation: 0,
-                    side: const BorderSide(color: Colors.blue),
-                    textStyle: TextStyle(
-                      fontSize: 14.sp,
-                      fontWeight: FontWeight.bold,
-                    ),
-                    padding: EdgeInsets.symmetric(
-                      horizontal: 16.w,
-                      vertical: 10.h,
-                    ),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8.r),
-                    ),
+                padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8.r),
+                ),
+              ),
+            ),
+            SizedBox(width: 8.w),
+            ElevatedButton.icon(
+              onPressed: _loadOvernightRequests,
+              icon: const Icon(Icons.refresh, size: 16),
+              label: const Text('새로고침'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.white,
+                foregroundColor: const Color(0xFF0D47A1),
+                elevation: 0,
+                side: const BorderSide(color: Color(0xFFE0E0E0)),
+                textStyle: TextStyle(
+                  fontSize: 14.sp,
+                  fontWeight: FontWeight.bold,
+                ),
+                padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8.r),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  // ─────────────────────────────────────────────────────────
+  // 상단 통계 카드(점호관리와 동일한 높이/너비/여백)
+  // ─────────────────────────────────────────────────────────
+  Widget _buildStatisticsCards() {
+    Widget card({
+      required IconData icon,
+      required Color color,
+      required String title,
+      required String value,
+      required bool selected,
+      required VoidCallback onTap,
+    }) {
+      return Expanded(
+        child: GestureDetector(
+          onTap: onTap,
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 200),
+            margin: EdgeInsets.only(right: 12.w),
+            padding: EdgeInsets.all(20.w), // 점호관리와 동일
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: _cardRadius,
+              boxShadow: _cardShadow,
+              border: Border.all(
+                color: selected ? color : const Color(0xFFE0E0E0),
+                width: selected ? 1.5 : 1.0,
+              ),
+            ),
+            child: Row(
+              children: [
+                CircleAvatar(
+                  radius: 22.r,
+                  backgroundColor: color.withOpacity(0.1),
+                  child: Icon(icon, color: color, size: 22.r),
+                ),
+                SizedBox(width: 16.w),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        title,
+                        style: TextStyle(
+                          color: Colors.grey[600],
+                          fontSize: 14.sp,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      SizedBox(height: 4.h),
+                      Text(
+                        value,
+                        style: TextStyle(
+                          color: Colors.black87,
+                          fontSize: 22.sp,
+                          fontWeight: FontWeight.bold,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
                   ),
                 ),
               ],
             ),
-          ],
+          ),
         ),
-        SizedBox(height: 16.h),
-        _buildStatisticsCards(),
-      ],
-    );
-  }
+      );
+    }
 
-  // ▼▼▼ [수정] 통계 카드 색상 변경 ▼▼▼
-  Widget _buildStatisticsCards() {
+    const totalColor = Color(0xFF0D47A1);
+    const waitingColor = Color(0xFFFFB300);
+    const approvedColor = Color(0xFF2E7D32);
+    const rejectedColor = Color(0xFFD32F2F);
+
     return Row(
       children: [
-        _buildStatCard('전체', _totalRequests, Colors.grey[600]!),
-        SizedBox(width: 12.w),
-        _buildStatCard('대기', _statusCounts['대기'] ?? 0, Colors.orange),
-        SizedBox(width: 12.w),
-        _buildStatCard('승인', _statusCounts['승인'] ?? 0, Colors.green),
-        SizedBox(width: 12.w),
-        _buildStatCard('반려', _statusCounts['반려'] ?? 0, Colors.red),
+        card(
+          icon: Icons.groups_rounded,
+          color: totalColor,
+          title: '전체',
+          value: '$_totalRequests 명',
+          selected: _selectedStatus == '전체',
+          onTap: () => _onStatTap('전체'),
+        ),
+        card(
+          icon: Icons.schedule,
+          color: waitingColor,
+          title: '대기',
+          value: '${_statusCounts['대기'] ?? 0} 명',
+          selected: _selectedStatus == '대기',
+          onTap: () => _onStatTap('대기'),
+        ),
+        card(
+          icon: Icons.check_circle_rounded,
+          color: approvedColor,
+          title: '승인',
+          value: '${_statusCounts['승인'] ?? 0} 명',
+          selected: _selectedStatus == '승인',
+          onTap: () => _onStatTap('승인'),
+        ),
+        card(
+          icon: Icons.cancel_rounded,
+          color: rejectedColor,
+          title: '반려',
+          value: '${_statusCounts['반려'] ?? 0} 명',
+          selected: _selectedStatus == '반려',
+          onTap: () => _onStatTap('반려'),
+        ),
       ],
     );
   }
-
-  Widget _buildStatCard(String title, int count, Color color) {
-    return Expanded(
-      child: Container(
-        padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
-        decoration: BoxDecoration(
-          color: color.withOpacity(0.1),
-          borderRadius: BorderRadius.circular(8.r),
-          border: Border.all(color: color.withOpacity(0.3)),
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(
-              title,
-              style: TextStyle(
-                fontSize: 14.sp,
-                color: color,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-            Text(
-              count.toString(),
-              style: TextStyle(
-                fontSize: 18.sp,
-                fontWeight: FontWeight.bold,
-                color: color,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
+  // ─────────────────────────────────────────────────────────
 
   Widget _buildFilterBar() {
     return Row(
@@ -893,7 +941,6 @@ class _AdOvernightPageState extends State<AdOvernightPage> {
     );
   }
 
-  // 일괄 적용 영역
   Widget _buildBulkActionRow() {
     return Padding(
       padding: EdgeInsets.only(top: 8.h),
@@ -951,7 +998,6 @@ class _AdOvernightPageState extends State<AdOvernightPage> {
           SizedBox(width: 8.w),
           ElevatedButton(
             onPressed: _applyBulkStatus,
-            child: Text('일괄 적용', style: TextStyle(fontSize: 14.sp)),
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.blue,
               foregroundColor: Colors.white,
@@ -960,6 +1006,7 @@ class _AdOvernightPageState extends State<AdOvernightPage> {
                 borderRadius: BorderRadius.circular(8.r),
               ),
             ),
+            child: Text('일괄 적용', style: TextStyle(fontSize: 14.sp)),
           ),
         ],
       ),
@@ -1068,10 +1115,10 @@ class _AdOvernightPageState extends State<AdOvernightPage> {
           color: Colors.white,
         ),
         offset: const Offset(0, -4),
-        scrollbarTheme: ScrollbarThemeData(
-          radius: const Radius.circular(40),
-          thickness: MaterialStateProperty.all(6),
-          thumbVisibility: MaterialStateProperty.all(true),
+        scrollbarTheme: const ScrollbarThemeData(
+          radius: Radius.circular(40),
+          thickness: MaterialStatePropertyAll(6),
+          thumbVisibility: MaterialStatePropertyAll(true),
         ),
       ),
     );
@@ -1093,8 +1140,8 @@ class _AdOvernightPageState extends State<AdOvernightPage> {
       color: Colors.white,
       child: SfDataGridTheme(
         data: SfDataGridThemeData(
-          headerColor: const Color(0xFFF8F9FA),
-          gridLineColor: const Color(0xFFE0E0E0),
+          headerColor: Color(0xFFF8F9FA),
+          gridLineColor: Color(0xFFE0E0E0),
           gridLineStrokeWidth: 1.0,
         ),
         child: SfDataGrid(
@@ -1108,13 +1155,11 @@ class _AdOvernightPageState extends State<AdOvernightPage> {
               final request =
                   _filteredRequests[details.rowColumnIndex.rowIndex - 1];
 
-              // 행 클릭 시 체크박스 상태 변경
               _onRowSelect(
                 request.uuid,
                 !_selectedUuids.contains(request.uuid),
               );
 
-              // 확장 가능한 행일 경우에만 확장 토글
               if (_isRowExpandable[request.uuid] == true) {
                 setState(() {
                   if (_expandedRowUuid == request.uuid) {
@@ -1146,7 +1191,7 @@ class _AdOvernightPageState extends State<AdOvernightPage> {
 
               return newHeight > 52.h ? newHeight : 52.h;
             }
-            return 52.h; // Default height
+            return 52.h;
           },
           columns: [
             GridColumn(
@@ -1359,11 +1404,9 @@ class OvernightRequest {
     DateTime? parseDate(dynamic value) {
       if (value == null) return null;
       try {
-        // ISO 8601 시도
         return DateTime.parse(value);
       } catch (_) {
         try {
-          // RFC 2822 시도
           return DateFormat(
             'EEE, dd MMM yyyy HH:mm:ss GMT',
             'en_US',
@@ -1508,8 +1551,8 @@ class OvernightDataSource extends DataGridSource {
         _requests.map<DataGridRow>((request) {
           return DataGridRow(
             cells: [
-              DataGridCell(columnName: 'select', value: null),
-              DataGridCell(columnName: 'req', value: request), // 실제 객체 전달
+              const DataGridCell(columnName: 'select', value: null),
+              DataGridCell(columnName: 'req', value: request),
               DataGridCell(columnName: 'studentId', value: request.studentId),
               DataGridCell(columnName: 'name', value: request.name),
               DataGridCell(columnName: 'building', value: request.building),
@@ -1530,7 +1573,7 @@ class OvernightDataSource extends DataGridSource {
                 value: request.rejectionReason ?? '',
               ),
               DataGridCell(columnName: 'status', value: request.status),
-              DataGridCell(columnName: 'actions', value: ''),
+              const DataGridCell(columnName: 'actions', value: ''),
             ],
           );
         }).toList();
@@ -1538,6 +1581,6 @@ class OvernightDataSource extends DataGridSource {
 
   @override
   void handleTap(int rowIndex, int columnIndex) {
-    // Let the onCellTap handle it.
+    // onCellTap에서 처리
   }
 }

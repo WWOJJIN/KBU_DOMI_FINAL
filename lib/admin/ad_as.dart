@@ -18,10 +18,13 @@ class _AdAsPageState extends State<AdAsPage> {
   ASDataSource? _asDataSource;
   final List<ASRequest> _asRequests = [];
   List<ASRequest> _filteredRequests = [];
-  final Set<String> _selectedUuids = {}; // 체크된 신청 uuid
+  final Set<String> _selectedUuids = {};
   bool _isLoading = true;
+
+  // ▼ 필터 상태(통계 카드/드롭다운 공유)
   String _selectedStatus = '전체';
   String _selectedCategory = '전체';
+
   String _bulkStatus = '상태 변경';
   final TextEditingController _searchController = TextEditingController();
   String? _expandedRowUuid;
@@ -29,11 +32,11 @@ class _AdAsPageState extends State<AdAsPage> {
   // 행별 확장 가능 여부 저장
   final Map<String, bool> _isRowExpandable = {};
 
-  // 통계 정보 추가
+  // 통계
   Map<String, int> _statusCounts = {};
   int _totalRequests = 0;
 
-  // 공지사항 관련 변수 추가
+  // 공지
   Map<String, dynamic>? _notice;
   final TextEditingController _noticeContentController =
       TextEditingController();
@@ -62,17 +65,27 @@ class _AdAsPageState extends State<AdAsPage> {
   ];
   static const List<String> _bulkStatusList = ['접수', '대기중', '처리중', '완료', '반려'];
 
+  // 카드 공통 스타일(점호 페이지 톤)
+  final BorderRadius _cardRadius = BorderRadius.circular(12.r);
+  final List<BoxShadow> _cardShadow = [
+    BoxShadow(
+      color: Colors.black.withOpacity(0.05),
+      blurRadius: 10,
+      offset: const Offset(0, 4),
+    ),
+  ];
+
   @override
   void initState() {
     super.initState();
     _loadASRequests();
-    _loadNotice(); // 공지사항 로드 추가
+    _loadNotice();
   }
 
   @override
   void dispose() {
     _searchController.dispose();
-    _noticeContentController.dispose(); // 공지사항 컨트롤러 해제 추가
+    _noticeContentController.dispose();
     super.dispose();
   }
 
@@ -103,12 +116,22 @@ class _AdAsPageState extends State<AdAsPage> {
         throw Exception('Failed to load AS requests');
       }
     } catch (e) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('데이터를 불러오는데 실패했습니다: $e')));
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('데이터를 불러오는데 실패했습니다: $e')));
+      }
     } finally {
-      setState(() => _isLoading = false);
+      if (mounted) setState(() => _isLoading = false);
     }
+  }
+
+  // 통계 카드 클릭 → 필터 반영(드롭다운 동기화)
+  void _onStatTap(String statusLabel) {
+    setState(() {
+      _selectedStatus = statusLabel;
+      _applyFilter();
+    });
   }
 
   void _onRowSelect(String uuid, bool selected) {
@@ -141,7 +164,7 @@ class _AdAsPageState extends State<AdAsPage> {
       final reason = await _showBulkRejectionDialog();
       if (reason == null) {
         setState(() => _isLoading = false);
-        return; // 사용자가 취소함
+        return;
       }
       for (final uuid in _selectedUuids) {
         await _updateRequestStatus(uuid, _bulkStatus, rejectionReason: reason);
@@ -173,7 +196,6 @@ class _AdAsPageState extends State<AdAsPage> {
           return matchesStatus && matchesCategory && matchesSearch;
         }).toList();
 
-    // 필터링된 데이터에 대해 확장 가능 여부 계산
     _updateExpandableRows();
 
     setState(() {
@@ -182,7 +204,7 @@ class _AdAsPageState extends State<AdAsPage> {
         _selectedUuids,
         _onRowSelect,
         _showStatusUpdateDialog,
-        _showAttachmentsDialog, // 첨부파일 보기 함수 추가
+        _showAttachmentsDialog,
         _expandedRowUuid,
         _isRowExpandable,
       );
@@ -191,19 +213,14 @@ class _AdAsPageState extends State<AdAsPage> {
 
   void _updateExpandableRows() {
     _isRowExpandable.clear();
-    // 글자 수를 기반으로 확장 가능 여부 판단 (한 줄에 약 25자 가정)
     const int descriptionMaxChars = 25;
 
     for (var req in _filteredRequests) {
-      if (req.description.length > descriptionMaxChars) {
-        _isRowExpandable[req.uuid] = true;
-      } else {
-        _isRowExpandable[req.uuid] = false;
-      }
+      _isRowExpandable[req.uuid] = req.description.length > descriptionMaxChars;
     }
   }
 
-  // 공지사항 로드
+  // 공지사항 로드/저장
   Future<void> _loadNotice() async {
     try {
       final response = await http.get(
@@ -216,12 +233,11 @@ class _AdAsPageState extends State<AdAsPage> {
           _noticeContentController.text = data['content'] ?? '';
         });
       }
-    } catch (e) {
-      print('AS 공지사항 로딩 실패: $e');
+    } catch (_) {
+      /* ignore */
     }
   }
 
-  // 공지사항 저장
   Future<void> _saveNotice(String content) async {
     try {
       final isUpdate = _notice != null && _notice!['id'] != null;
@@ -252,16 +268,20 @@ class _AdAsPageState extends State<AdAsPage> {
 
       if (response.statusCode == 200 || response.statusCode == 201) {
         await _loadNotice();
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('공지사항이 저장되었습니다.')));
+        if (mounted) {
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(const SnackBar(content: Text('공지사항이 저장되었습니다.')));
+        }
       } else {
         throw Exception('Failed to save notice: ${response.body}');
       }
     } catch (e) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('공지사항 저장에 실패했습니다: $e')));
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('공지사항 저장에 실패했습니다: $e')));
+      }
     }
   }
 
@@ -283,9 +303,11 @@ class _AdAsPageState extends State<AdAsPage> {
         throw Exception('Failed to update status');
       }
     } catch (e) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('상태 업데이트에 실패했습니다: $e')));
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('상태 업데이트에 실패했습니다: $e')));
+      }
     }
   }
 
@@ -296,10 +318,10 @@ class _AdAsPageState extends State<AdAsPage> {
       context: context,
       builder:
           (context) => AlertDialog(
-            title: Text('일괄 반려 사유 입력'),
+            title: const Text('일괄 반려 사유 입력'),
             content: TextField(
               controller: rejectionReasonController,
-              decoration: InputDecoration(
+              decoration: const InputDecoration(
                 labelText: '반려 사유',
                 hintText: '모든 선택된 항목에 동일한 사유가 적용됩니다.',
                 border: OutlineInputBorder(),
@@ -309,13 +331,13 @@ class _AdAsPageState extends State<AdAsPage> {
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(context),
-                child: Text('취소'),
+                child: const Text('취소'),
               ),
               ElevatedButton(
                 onPressed: () {
                   Navigator.pop(context, rejectionReasonController.text);
                 },
-                child: Text('확인'),
+                child: const Text('확인'),
               ),
             ],
           ),
@@ -362,7 +384,6 @@ class _AdAsPageState extends State<AdAsPage> {
 
                 return GestureDetector(
                   onTap: () {
-                    // 이미지 크게 보기
                     showDialog(
                       context: context,
                       builder:
@@ -378,23 +399,10 @@ class _AdAsPageState extends State<AdAsPage> {
                                     return Container(
                                       color: Colors.grey.shade200,
                                       child: Center(
-                                        child: Column(
-                                          mainAxisSize: MainAxisSize.min,
-                                          children: [
-                                            Icon(
-                                              Icons.error,
-                                              color: Colors.red,
-                                              size: 48.sp,
-                                            ),
-                                            SizedBox(height: 8.h),
-                                            Text(
-                                              '이미지 로드 실패',
-                                              style: TextStyle(
-                                                color: Colors.white,
-                                                fontSize: 16.sp,
-                                              ),
-                                            ),
-                                          ],
+                                        child: Icon(
+                                          Icons.error,
+                                          color: Colors.red,
+                                          size: 48.sp,
                                         ),
                                       ),
                                     );
@@ -426,23 +434,10 @@ class _AdAsPageState extends State<AdAsPage> {
                           return Container(
                             color: Colors.grey.shade200,
                             child: Center(
-                              child: Column(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Icon(
-                                    Icons.broken_image,
-                                    color: Colors.grey.shade600,
-                                    size: 40.sp,
-                                  ),
-                                  SizedBox(height: 8.h),
-                                  Text(
-                                    '이미지 로드 실패',
-                                    style: TextStyle(
-                                      fontSize: 12.sp,
-                                      color: Colors.grey.shade600,
-                                    ),
-                                  ),
-                                ],
+                              child: Icon(
+                                Icons.broken_image,
+                                color: Colors.grey.shade600,
+                                size: 40.sp,
                               ),
                             ),
                           );
@@ -460,7 +455,7 @@ class _AdAsPageState extends State<AdAsPage> {
                                             loadingProgress.expectedTotalBytes!
                                         : null,
                                 strokeWidth: 3.w,
-                                valueColor: AlwaysStoppedAnimation<Color>(
+                                valueColor: const AlwaysStoppedAnimation<Color>(
                                   Colors.blue,
                                 ),
                               ),
@@ -567,8 +562,8 @@ class _AdAsPageState extends State<AdAsPage> {
                             width: 1,
                           ),
                         ),
-                        focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12.r),
+                        focusedBorder: const OutlineInputBorder(
+                          borderRadius: BorderRadius.all(Radius.circular(12)),
                           borderSide: BorderSide(
                             color: Colors.blueAccent,
                             width: 1.5,
@@ -595,9 +590,7 @@ class _AdAsPageState extends State<AdAsPage> {
                               .toList(),
                       onChanged: (value) {
                         if (value != null) {
-                          setStateInDialog(() {
-                            newStatus = value;
-                          });
+                          setStateInDialog(() => newStatus = value);
                         }
                       },
                       buttonStyleData: ButtonStyleData(
@@ -679,10 +672,12 @@ class _AdAsPageState extends State<AdAsPage> {
                                     ? rejectionReasonController.text
                                     : null,
                           );
-                          await _loadASRequests(); // 데이터 다시 로드
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('상태가 업데이트되었습니다.')),
-                          );
+                          await _loadASRequests();
+                          if (mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('상태가 업데이트되었습니다.')),
+                            );
+                          }
                         },
                         child: Text(
                           '저장',
@@ -707,12 +702,15 @@ class _AdAsPageState extends State<AdAsPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
+      // 점호 페이지와 동일하게 all(24) 적용
       body: Padding(
-        padding: EdgeInsets.symmetric(horizontal: 24.w, vertical: 16.h),
+        padding: EdgeInsets.all(24.w),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             _buildHeader(),
+            SizedBox(height: 16.h),
+            _buildStatisticsCards(), // 점호 스타일의 통계 카드 + 클릭 필터
             SizedBox(height: 16.h),
             _buildFilterBar(),
             SizedBox(height: 8.h),
@@ -730,122 +728,182 @@ class _AdAsPageState extends State<AdAsPage> {
   }
 
   Widget _buildHeader() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+    // 점호 헤더와 유사한 레이아웃/사이즈
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
+        Text(
+          'A/S 신청 관리',
+          style: TextStyle(fontSize: 22.sp, fontWeight: FontWeight.bold),
+        ),
         Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text(
-              'A/S 신청 관리',
-              style: TextStyle(fontSize: 24.sp, fontWeight: FontWeight.bold),
-            ),
-            Row(
-              children: [
-                ElevatedButton.icon(
-                  onPressed: _showNoticeDialog,
-                  icon: Icon(Icons.announcement, size: 16.w),
-                  label: const Text('공지사항'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.orange,
-                    foregroundColor: Colors.white,
-                    elevation: 0,
-                    textStyle: TextStyle(
-                      fontSize: 14.sp,
-                      fontWeight: FontWeight.bold,
-                    ),
-                    padding: EdgeInsets.symmetric(
-                      horizontal: 16.w,
-                      vertical: 10.h,
-                    ),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8.r),
-                    ),
-                  ),
+            ElevatedButton.icon(
+              onPressed: _showNoticeDialog,
+              icon: Icon(Icons.announcement, size: 16.w),
+              label: const Text('공지사항'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.white,
+                foregroundColor: Colors.orange,
+                elevation: 0,
+                side: const BorderSide(color: Color(0xFFFFCC80)),
+                textStyle: TextStyle(
+                  fontSize: 14.sp,
+                  fontWeight: FontWeight.bold,
                 ),
-                SizedBox(width: 8.w),
-                ElevatedButton.icon(
-                  onPressed: _loadASRequests,
-                  icon: const Icon(Icons.refresh, size: 16),
-                  label: const Text('새로고침'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.white,
-                    foregroundColor: Colors.blue,
-                    elevation: 0,
-                    side: const BorderSide(color: Colors.blue),
-                    textStyle: TextStyle(
-                      fontSize: 14.sp,
-                      fontWeight: FontWeight.bold,
-                    ),
-                    padding: EdgeInsets.symmetric(
-                      horizontal: 16.w,
-                      vertical: 10.h,
-                    ),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8.r),
-                    ),
+                padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8.r),
+                ),
+              ),
+            ),
+            SizedBox(width: 8.w),
+            ElevatedButton.icon(
+              onPressed: _loadASRequests,
+              icon: const Icon(Icons.refresh, size: 16),
+              label: const Text('새로고침'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.white,
+                foregroundColor: const Color(0xFF0D47A1),
+                elevation: 0,
+                side: const BorderSide(color: Color(0xFFE0E0E0)),
+                textStyle: TextStyle(
+                  fontSize: 14.sp,
+                  fontWeight: FontWeight.bold,
+                ),
+                padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8.r),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  // ─────────────────────────────────────────────────────────
+  // 점호 스타일의 상단 통계 카드 (클릭 시 상태 필터링 + 드롭다운 동기화)
+  // ─────────────────────────────────────────────────────────
+  Widget _buildStatisticsCards() {
+    Widget card({
+      required IconData icon,
+      required Color color,
+      required String title,
+      required String value,
+      required bool selected,
+      required VoidCallback onTap,
+    }) {
+      return Expanded(
+        child: GestureDetector(
+          onTap: onTap,
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 200),
+            margin: EdgeInsets.only(right: 12.w),
+            padding: EdgeInsets.all(20.w),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: _cardRadius,
+              boxShadow: _cardShadow,
+              border: Border.all(
+                color: selected ? color : const Color(0xFFE0E0E0),
+                width: selected ? 1.5 : 1.0,
+              ),
+            ),
+            child: Row(
+              children: [
+                CircleAvatar(
+                  radius: 22.r,
+                  backgroundColor: color.withOpacity(0.1),
+                  child: Icon(icon, color: color, size: 22.r),
+                ),
+                SizedBox(width: 16.w),
+                Expanded(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        title,
+                        style: TextStyle(
+                          color: Colors.grey[600],
+                          fontSize: 14.sp,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      SizedBox(height: 4.h),
+                      Text(
+                        value,
+                        style: TextStyle(
+                          color: Colors.black87,
+                          fontSize: 22.sp,
+                          fontWeight: FontWeight.bold,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
                   ),
                 ),
               ],
             ),
-          ],
+          ),
         ),
-        SizedBox(height: 16.h),
-        _buildStatisticsCards(),
-      ],
-    );
-  }
+      );
+    }
 
-  // 통계 카드
-  Widget _buildStatisticsCards() {
+    const totalColor = Color(0xFF0D47A1);
+    const waitingColor = Color(0xFFFFB300);
+    const processingColor = Color(0xFF1976D2);
+    const completedColor = Color(0xFF2E7D32);
+    const rejectedColor = Color(0xFFD32F2F);
+
     return Row(
       children: [
-        _buildStatCard('전체', _totalRequests, Colors.grey[600]!),
-        SizedBox(width: 12.w),
-        _buildStatCard('대기중', _statusCounts['대기중'] ?? 0, Colors.orange),
-        SizedBox(width: 12.w),
-        _buildStatCard('처리중', _statusCounts['처리중'] ?? 0, Colors.blue),
-        SizedBox(width: 12.w),
-        _buildStatCard('완료', _statusCounts['완료'] ?? 0, Colors.grey[600]!),
-        SizedBox(width: 12.w),
-        _buildStatCard('반려', _statusCounts['반려'] ?? 0, Colors.grey[600]!),
+        card(
+          icon: Icons.groups_rounded,
+          color: totalColor,
+          title: '전체',
+          value: '$_totalRequests 건',
+          selected: _selectedStatus == '전체',
+          onTap: () => _onStatTap('전체'),
+        ),
+        card(
+          icon: Icons.schedule_rounded,
+          color: waitingColor,
+          title: '대기중',
+          value: '${_statusCounts['대기중'] ?? 0} 건',
+          selected: _selectedStatus == '대기중',
+          onTap: () => _onStatTap('대기중'),
+        ),
+        card(
+          icon: Icons.handyman_rounded,
+          color: processingColor,
+          title: '처리중',
+          value: '${_statusCounts['처리중'] ?? 0} 건',
+          selected: _selectedStatus == '처리중',
+          onTap: () => _onStatTap('처리중'),
+        ),
+        card(
+          icon: Icons.check_circle_rounded,
+          color: completedColor,
+          title: '완료',
+          value: '${_statusCounts['완료'] ?? 0} 건',
+          selected: _selectedStatus == '완료',
+          onTap: () => _onStatTap('완료'),
+        ),
+        card(
+          icon: Icons.cancel_rounded,
+          color: rejectedColor,
+          title: '반려',
+          value: '${_statusCounts['반려'] ?? 0} 건',
+          selected: _selectedStatus == '반려',
+          onTap: () => _onStatTap('반려'),
+        ),
       ],
     );
   }
-
-  Widget _buildStatCard(String title, int count, Color color) {
-    return Expanded(
-      child: Container(
-        padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
-        decoration: BoxDecoration(
-          color: color.withOpacity(0.1),
-          borderRadius: BorderRadius.circular(8.r),
-          border: Border.all(color: color.withOpacity(0.3)),
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(
-              title,
-              style: TextStyle(
-                fontSize: 14.sp,
-                color: color,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-            Text(
-              count.toString(),
-              style: TextStyle(
-                fontSize: 18.sp,
-                fontWeight: FontWeight.bold,
-                color: color,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
+  // ─────────────────────────────────────────────────────────
 
   Widget _buildFilterBar() {
     return Row(
@@ -874,7 +932,7 @@ class _AdAsPageState extends State<AdAsPage> {
           ),
           SizedBox(width: 8.w),
           SizedBox(
-            width: 150.w,
+            width: 155.w,
             child: DropdownButtonFormField2<String>(
               isExpanded: true,
               decoration: InputDecoration(
@@ -919,7 +977,6 @@ class _AdAsPageState extends State<AdAsPage> {
           SizedBox(width: 8.w),
           ElevatedButton(
             onPressed: _applyBulkStatus,
-            child: Text('일괄 적용', style: TextStyle(fontSize: 14.sp)),
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.blue,
               foregroundColor: Colors.white,
@@ -928,6 +985,7 @@ class _AdAsPageState extends State<AdAsPage> {
                 borderRadius: BorderRadius.circular(8.r),
               ),
             ),
+            child: Text('일괄 적용', style: TextStyle(fontSize: 14.sp)),
           ),
         ],
       ),
@@ -1036,10 +1094,10 @@ class _AdAsPageState extends State<AdAsPage> {
           color: Colors.white,
         ),
         offset: const Offset(0, -4),
-        scrollbarTheme: ScrollbarThemeData(
-          radius: const Radius.circular(40),
-          thickness: MaterialStateProperty.all(6),
-          thumbVisibility: MaterialStateProperty.all(true),
+        scrollbarTheme: const ScrollbarThemeData(
+          radius: Radius.circular(40),
+          thickness: MaterialStatePropertyAll(6),
+          thumbVisibility: MaterialStatePropertyAll(true),
         ),
       ),
     );
@@ -1061,8 +1119,8 @@ class _AdAsPageState extends State<AdAsPage> {
       color: Colors.white,
       child: SfDataGridTheme(
         data: SfDataGridThemeData(
-          headerColor: const Color(0xFFF8F9FA),
-          gridLineColor: const Color(0xFFE0E0E0),
+          headerColor: Color(0xFFF8F9FA),
+          gridLineColor: Color(0xFFE0E0E0),
           gridLineStrokeWidth: 1.0,
         ),
         child: SfDataGrid(
@@ -1076,13 +1134,11 @@ class _AdAsPageState extends State<AdAsPage> {
               final request =
                   _filteredRequests[details.rowColumnIndex.rowIndex - 1];
 
-              // 행 클릭 시 체크박스 상태 변경
               _onRowSelect(
                 request.uuid,
                 !_selectedUuids.contains(request.uuid),
               );
 
-              // 확장 가능한 행일 경우에만 확장 토글
               if (_isRowExpandable[request.uuid] == true) {
                 setState(() {
                   if (_expandedRowUuid == request.uuid) {
@@ -1095,23 +1151,19 @@ class _AdAsPageState extends State<AdAsPage> {
             }
           },
           onQueryRowHeight: (RowHeightDetails details) {
-            if (details.rowIndex == 0) {
-              return details.rowHeight;
-            }
+            if (details.rowIndex == 0) return details.rowHeight;
             final request = _filteredRequests[details.rowIndex - 1];
 
-            // 반려 사유가 있는 경우 기본적으로 높이 증가
             double baseHeight = 52.h;
             if (request.rejectionReason != null &&
                 request.rejectionReason!.isNotEmpty) {
-              baseHeight = 75.h; // 반려 사유가 있을 때 기본 높이 증가
+              baseHeight = 75.h;
             }
 
             if (_isRowExpandable[request.uuid] == true &&
                 _expandedRowUuid == request.uuid) {
               final descriptionLines = (request.description.length / 25).ceil();
               final newHeight = (descriptionLines * 20.h) + 16.h;
-
               return newHeight > baseHeight ? newHeight : baseHeight;
             }
             return baseHeight;
@@ -1352,8 +1404,8 @@ class ASRequest {
   final String building;
   final String roomNumber;
   final String? rejectionReason;
-  final List<dynamic> attachments; // 첨부파일 목록 추가
-  final bool hasAttachments; // 첨부파일 유무 추가
+  final List<dynamic> attachments; // 첨부파일 목록
+  final bool hasAttachments; // 첨부파일 유무
 
   ASRequest({
     required this.uuid,
@@ -1366,8 +1418,8 @@ class ASRequest {
     required this.building,
     required this.roomNumber,
     this.rejectionReason,
-    this.attachments = const [], // 기본값 설정
-    this.hasAttachments = false, // 기본값 설정
+    this.attachments = const [],
+    this.hasAttachments = false,
   });
 
   factory ASRequest.fromJson(Map<String, dynamic> json) {
@@ -1382,8 +1434,8 @@ class ASRequest {
       building: json['dorm_building'] ?? '정보없음',
       roomNumber: json['room_num'] ?? '정보없음',
       rejectionReason: json['rejection_reason'],
-      attachments: json['attachments'] ?? [], // 첨부파일 목록 추가
-      hasAttachments: json['has_attachments'] ?? false, // 첨부파일 유무 추가
+      attachments: json['attachments'] ?? [],
+      hasAttachments: json['has_attachments'] ?? false,
     );
   }
 }
@@ -1393,7 +1445,7 @@ class ASDataSource extends DataGridSource {
   final Set<String> _selectedUuids;
   final void Function(String uuid, bool selected) onRowSelect;
   final void Function(ASRequest request) onStatusEdit;
-  final void Function(ASRequest request) onShowAttachments; // 첨부파일 보기 콜백 추가
+  final void Function(ASRequest request) onShowAttachments;
   final String? expandedRowUuid;
   final Map<String, bool> isRowExpandable;
   final DateFormat _dateFormat = DateFormat('yyyy-MM-dd');
@@ -1403,7 +1455,7 @@ class ASDataSource extends DataGridSource {
     this._selectedUuids,
     this.onRowSelect,
     this.onStatusEdit,
-    this.onShowAttachments, // 첨부파일 보기 콜백 추가
+    this.onShowAttachments,
     this.expandedRowUuid,
     this.isRowExpandable,
   ) {
@@ -1455,12 +1507,12 @@ class ASDataSource extends DataGridSource {
                       ),
             );
           } else if (cell.columnName == 'rejectionReason') {
-            // 반려사유 전용 컬럼
             return Container(
               padding: EdgeInsets.all(8.w),
               alignment: Alignment.centerLeft,
               child:
-                  req.rejectionReason != null && req.rejectionReason!.isNotEmpty
+                  (req.rejectionReason != null &&
+                          req.rejectionReason!.isNotEmpty)
                       ? Container(
                         padding: EdgeInsets.symmetric(
                           horizontal: 8.w,
@@ -1505,9 +1557,8 @@ class ASDataSource extends DataGridSource {
                 expandedRowUuid == req.uuid;
 
             Alignment alignment = Alignment.center;
-            if (cell.columnName == 'description') {
+            if (cell.columnName == 'description')
               alignment = Alignment.centerLeft;
-            }
 
             return Container(
               padding: EdgeInsets.all(8.w),
@@ -1566,7 +1617,7 @@ class ASDataSource extends DataGridSource {
         _requests.map<DataGridRow>((request) {
           return DataGridRow(
             cells: [
-              DataGridCell(columnName: 'select', value: null),
+              const DataGridCell(columnName: 'select', value: null),
               DataGridCell(columnName: 'req', value: request),
               DataGridCell(
                 columnName: 'registeredAt',
@@ -1593,7 +1644,7 @@ class ASDataSource extends DataGridSource {
                         ? '${request.attachments.length}'
                         : '',
               ),
-              DataGridCell(columnName: 'actions', value: ''),
+              const DataGridCell(columnName: 'actions', value: ''),
             ],
           );
         }).toList();
