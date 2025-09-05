@@ -680,7 +680,7 @@ class _RoommatePageState extends State<RoommatePage> {
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(context, false),
-                child: const Text('취소'),
+                child: const Text('신청취소'),
               ),
               TextButton(
                 onPressed: () => Navigator.pop(context, true),
