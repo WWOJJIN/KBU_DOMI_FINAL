@@ -1841,7 +1841,7 @@ class _AdInPageState extends State<AdInPage>
         } else {
           cardColor = Colors.white;
           textColor = AppColors.fontPrimary;
-          onTapCallback = () => _showOccupancyDetails(context, room);
+          onTapCallback = () => _showStudentsForRoomAssignment(context, room);
         }
         return InkWell(
           borderRadius: BorderRadius.circular(8.r),
@@ -2915,6 +2915,79 @@ class _AdInPageState extends State<AdInPage>
                   app['gender'] == room['gender'],
             )
             .toList();
+    // 빈 방일 때는 간단한 다이얼로그, 학생이 있을 때는 기존 다이얼로그 사용
+    if (eligibleStudents.isEmpty) {
+      _showEmptyRoomDialog(parentContext, room);
+    } else {
+      _showStudentSelectionDialog(
+        parentContext,
+        room,
+        eligibleStudents,
+        selectedStudentIds,
+      );
+    }
+  }
+
+  // 빈 방을 위한 간단한 다이얼로그
+  void _showEmptyRoomDialog(
+    BuildContext parentContext,
+    Map<String, dynamic> room,
+  ) {
+    showDialog(
+      context: parentContext,
+      builder: (BuildContext dialogContext) {
+        return AlertDialog(
+          backgroundColor: Colors.white,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(8.r),
+          ),
+          contentPadding: EdgeInsets.fromLTRB(24.w, 20.h, 24.w, 16.h),
+          title: Text(
+            '${room['building']} ${room['roomNumber']}',
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              fontSize: 18.sp,
+              color: AppColors.fontPrimary,
+            ),
+          ),
+          content: SizedBox(
+            width: 300.w,
+            child: Text(
+              '배정 가능한 학생이 없습니다.\n(\'확인\' 상태 확인)',
+              style: TextStyle(
+                color: AppColors.fontSecondary,
+                fontSize: 15.sp,
+                height: 1.5,
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ),
+          actions: [
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                foregroundColor: Colors.white,
+                padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 12.h),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8.r),
+                ),
+              ),
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              child: const Text('닫기'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  // 학생 선택을 위한 기존 다이얼로그
+  void _showStudentSelectionDialog(
+    BuildContext parentContext,
+    Map<String, dynamic> room,
+    List<Map<String, dynamic>> eligibleStudents,
+    Set<String> selectedStudentIds,
+  ) {
     showDialog(
       context: parentContext,
       builder: (BuildContext dialogContext) {
@@ -2960,77 +3033,61 @@ class _AdInPageState extends State<AdInPage>
                       ),
                     ),
                     SizedBox(height: 16.h),
-                    eligibleStudents.isEmpty
-                        ? Expanded(
-                          child: Center(
-                            child: Text(
-                              '배정 가능한 학생이 없습니다. (\'확인\' 상태 확인)',
-                              style: TextStyle(
-                                color: AppColors.fontSecondary,
-                                fontSize: 15.sp,
+                    Flexible(
+                      child: ConstrainedBox(
+                        constraints: BoxConstraints(maxHeight: 300.h),
+                        child: ListView.builder(
+                          shrinkWrap: true,
+                          itemCount: eligibleStudents.length,
+                          itemBuilder: (context, index) {
+                            final student = eligibleStudents[index];
+                            return CheckboxListTile(
+                              title: Text(
+                                '${student['studentName']} (${student['studentId']})',
+                                style: TextStyle(
+                                  fontSize: 15.sp,
+                                  color: AppColors.fontPrimary,
+                                ),
                               ),
-                            ),
-                          ),
-                        )
-                        : Flexible(
-                          child: ConstrainedBox(
-                            constraints: BoxConstraints(maxHeight: 300.h),
-                            child: ListView.builder(
-                              shrinkWrap: true,
-                              itemCount: eligibleStudents.length,
-                              itemBuilder: (context, index) {
-                                final student = eligibleStudents[index];
-                                return CheckboxListTile(
-                                  title: Text(
-                                    '${student['studentName']} (${student['studentId']})',
-                                    style: TextStyle(
-                                      fontSize: 15.sp,
-                                      color: AppColors.fontPrimary,
-                                    ),
-                                  ),
-                                  subtitle: Text(
-                                    '${student['dormBuilding']} ${student['roomType']}',
-                                    style: TextStyle(
-                                      fontSize: 13.sp,
-                                      color: AppColors.fontSecondary,
-                                    ),
-                                  ),
-                                  value: selectedStudentIds.contains(
-                                    student['id'],
-                                  ),
-                                  onChanged: (bool? value) {
-                                    setState(() {
-                                      if (value == true) {
-                                        if (selectedStudentIds.length <
-                                            remainingCapacity) {
-                                          selectedStudentIds.add(student['id']);
-                                        } else {
-                                          ScaffoldMessenger.of(
-                                            context,
-                                          ).showSnackBar(
-                                            const SnackBar(
-                                              content: Text(
-                                                '방 정원을 초과하여 선택할 수 없습니다.',
-                                              ),
-                                            ),
-                                          );
-                                        }
-                                      } else {
-                                        selectedStudentIds.remove(
-                                          student['id'],
-                                        );
-                                      }
-                                    });
-                                  },
-                                );
+                              subtitle: Text(
+                                '${student['dormBuilding']} ${student['roomType']}',
+                                style: TextStyle(
+                                  fontSize: 13.sp,
+                                  color: AppColors.fontSecondary,
+                                ),
+                              ),
+                              value: selectedStudentIds.contains(student['id']),
+                              onChanged: (bool? value) {
+                                setState(() {
+                                  if (value == true) {
+                                    if (selectedStudentIds.length <
+                                        remainingCapacity) {
+                                      selectedStudentIds.add(student['id']);
+                                    } else {
+                                      ScaffoldMessenger.of(
+                                        context,
+                                      ).showSnackBar(
+                                        const SnackBar(
+                                          content: Text(
+                                            '방 정원을 초과하여 선택할 수 없습니다.',
+                                          ),
+                                        ),
+                                      );
+                                    }
+                                  } else {
+                                    selectedStudentIds.remove(student['id']);
+                                  }
+                                });
                               },
-                            ),
-                          ),
+                            );
+                          },
                         ),
+                      ),
+                    ),
                   ],
                 ),
               ),
-              actions: <Widget>[
+              actions: [
                 TextButton(
                   onPressed: () => Navigator.of(dialogContext).pop(),
                   child: const Text(
