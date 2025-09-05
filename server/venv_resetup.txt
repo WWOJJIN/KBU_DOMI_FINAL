@@ -1,0 +1,13 @@
+맥OS
+1. rm -rf server/venv                        //가상환경 삭제
+2. python3 -m venv server/venv               //가상환경 생성
+3. source server/venv/bin/activate           //가상환경 활성화
+4. pip install -r server/requirements.txt    //라이브러리 한번에 설치
+5. python server/app.py                      //서버 실행
+
+윈도우OS
+1. rmdir /s /q server\venv                   //가상환경 삭제
+2. python -m venv server\venv                //가상환경 생성
+3. server\venv\Scripts\activate              //가상환경 활성화
+4. pip install -r server\requirements.txt    //라이브러리 한번에 설치
+5. python server\app.py                      //서버 실행

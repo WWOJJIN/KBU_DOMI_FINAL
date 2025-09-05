@@ -1,0 +1,69 @@
+name: kbu_domi
+description: "A new Flutter project."
+
+publish_to: 'none' 
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.7.2
+
+
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.8
+  url_launcher: ^6.1.5
+  intl: ^0.20.2
+  image_picker: ^1.0.4
+  file_picker: ^8.0.0
+  flutter_screenutil: ^5.8.4
+  gap: ^3.0.1
+  google_fonts: ^6.1.0
+  flutter_animate: ^4.0.0
+  animated_toggle_switch: ^0.8.5
+  table_calendar: ^3.0.9
+  dropdown_button2: ^2.3.9
+  http: ^1.4.0
+  provider: ^6.1.5
+  percent_indicator: ^4.2.3
+  fl_chart: ^0.66.2
+  kpostal: ^1.1.0
+  webview_flutter: ^4.7.0
+  uuid: ^4.0.0
+  dio: ^5.4.0
+  path: ^1.8.3
+  syncfusion_flutter_datagrid: ^24.1.41
+  syncfusion_flutter_core: ^24.1.41
+  material_design_icons_flutter: ^7.0.7296
+  animate_do: ^3.3.4
+  flutter_localizations: 
+    sdk: flutter
+  geolocator: ^11.0.0
+
+
+
+  
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^2.0.0
+
+flutter:
+  uses-material-design: true
+  assets:
+    - imgs/
+  fonts:
+    - family: Gmarket
+      fonts:
+        - asset: imgs/fonts/GmarketSansTTFLight.ttf
+          weight: 300
+        - asset: imgs/fonts/GmarketSansTTFMedium.ttf
+          weight: 400
+        - asset: imgs/fonts/GmarketSansTTFBold.ttf
+          weight: 700
+
+
+  
+
+  
