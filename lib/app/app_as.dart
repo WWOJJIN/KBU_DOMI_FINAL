@@ -107,7 +107,9 @@ class _AppAsState extends State<AppAs> with SingleTickerProviderStateMixin {
 
     if (studentId == null) {
       print('❌ 학생 ID가 없습니다. 로그인 페이지로 이동합니다.');
-      Navigator.pushReplacementNamed(context, '/login');
+      if (mounted) {
+        Navigator.pushReplacementNamed(context, '/login');
+      }
       return;
     }
 
@@ -122,12 +124,14 @@ class _AppAsState extends State<AppAs> with SingleTickerProviderStateMixin {
 
         if (data['success'] == true && data['user'] != null) {
           final user = data['user'];
-          setState(() {
-            _studentName = user['name'] ?? '';
-            _studentId = studentId;
-            _dormBuilding = user['dorm_building'] ?? '';
-            _roomNumber = user['room_num']?.toString() ?? '';
-          });
+          if (mounted) {
+            setState(() {
+              _studentName = user['name'] ?? '';
+              _studentId = studentId;
+              _dormBuilding = user['dorm_building'] ?? '';
+              _roomNumber = user['room_num']?.toString() ?? '';
+            });
+          }
           print(
             '✅ AS 페이지 학생 정보 설정 완료: $_studentName, $_dormBuilding $_roomNumber호',
           );
@@ -163,104 +167,57 @@ class _AppAsState extends State<AppAs> with SingleTickerProviderStateMixin {
         ),
       );
 
-      if (mounted) {
-        if (response.statusCode == 200) {
-          final data = json.decode(response.body);
-          print('🔧 AS 신청 내역 API 응답: $data'); // 디버깅용 로그
+      if (!mounted) return;
 
-          // 새로운 API 형식 (success 키 포함) 또는 기존 형식 (직접 배열) 처리
-          if (data is Map && data.containsKey('success')) {
-            // 새로운 형식: {success: true, requests: [...]}
-            if (data['success'] == true) {
-              final rawRequests = List<Map<String, dynamic>>.from(
-                data['requests'] ?? [],
-              );
-              // 서버 상태값을 Flutter에서 기대하는 형식으로 변환
-              _requestHistory =
-                  rawRequests.map((req) {
-                    final serverStatus = req['stat'] ?? '';
-                    String flutterStatus;
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        print('🔧 AS 신청 내역 API 응답: $data');
 
-                    // 서버 상태 → Flutter 상태 매핑
-                    switch (serverStatus) {
-                      case '접수':
-                        flutterStatus = '신청';
-                        break;
-                      case '처리중':
-                        flutterStatus = '수리중';
-                        break;
-                      case '완료':
-                        flutterStatus = '수리완료';
-                        break;
-                      case '반려':
-                        flutterStatus = '반려';
-                        break;
-                      default:
-                        flutterStatus = '신청';
-                    }
-
-                    return {
-                      ...req,
-                      'stat': flutterStatus, // 상태값 변환
-                    };
-                  }).toList();
-
-              print('✅ AS 신청 내역 로드 완료: ${_requestHistory.length}건');
-              print(
-                '📋 AS 내역 상세: ${_requestHistory.map((r) => '${r['as_category']} - ${r['stat']}').join(', ')}',
-              );
-            } else {
-              _requestHistory = [];
-              print('⚠️ AS API 오류: ${data['error'] ?? '알 수 없는 오류'}');
-            }
-          } else if (data is List) {
-            // 기존 형식: 직접 배열 반환 (상태값 변환 포함)
-            final rawRequests = List<Map<String, dynamic>>.from(data);
-            _requestHistory =
-                rawRequests.map((req) {
-                  final serverStatus = req['stat'] ?? '';
-                  String flutterStatus;
-
-                  switch (serverStatus) {
-                    case '접수':
-                      flutterStatus = '신청';
-                      break;
-                    case '처리중':
-                      flutterStatus = '수리중';
-                      break;
-                    case '완료':
-                      flutterStatus = '수리완료';
-                      break;
-                    case '반려':
-                      flutterStatus = '반려';
-                      break;
-                    default:
-                      flutterStatus = '신청';
-                  }
-
-                  return {...req, 'stat': flutterStatus};
-                }).toList();
-            print('✅ AS 신청 내역 로드 완료 (기존 형식): ${_requestHistory.length}건');
-          } else {
-            _requestHistory = [];
-            print('⚠️ 예상치 못한 AS API 응답 형식');
+        List<Map<String, dynamic>> parsed = [];
+        if (data is Map && data.containsKey('success')) {
+          if (data['success'] == true) {
+            parsed = List<Map<String, dynamic>>.from(data['requests'] ?? []);
           }
-        } else {
-          _requestHistory = [];
-          print('❌ AS API 호출 실패: ${response.statusCode}');
-          _showSnackBar('신청 내역을 불러올 수 없습니다.', isError: true);
+        } else if (data is List) {
+          parsed = List<Map<String, dynamic>>.from(data);
         }
-        setState(() => _isHistoryLoading = false);
+
+        // 서버 상태 → 화면 상태 매핑
+        _requestHistory =
+            parsed.map((req) {
+              final serverStatus = req['stat'] ?? '';
+              String flutterStatus;
+              switch (serverStatus) {
+                case '접수':
+                  flutterStatus = '신청';
+                  break;
+                case '처리중':
+                  flutterStatus = '수리중';
+                  break;
+                case '완료':
+                  flutterStatus = '수리완료';
+                  break;
+                case '반려':
+                  flutterStatus = '반려';
+                  break;
+                default:
+                  flutterStatus = '신청';
+              }
+              return {...req, 'stat': flutterStatus};
+            }).toList();
+
+        print('✅ AS 신청 내역 로드 완료: ${_requestHistory.length}건');
+      } else {
+        _requestHistory = [];
+        print('❌ AS API 호출 실패: ${response.statusCode}');
+        _showSnackBar('신청 내역을 불러올 수 없습니다.', isError: true);
       }
     } catch (e) {
-      if (mounted) {
-        setState(() {
-          _requestHistory = [];
-          _isHistoryLoading = false;
-        });
-        print('❌ AS API 네트워크 오류: $e');
-        _showSnackBar('네트워크 오류: $e', isError: true);
-      }
+      _requestHistory = [];
+      print('❌ AS API 네트워크 오류: $e');
+      _showSnackBar('네트워크 오류: $e', isError: true);
+    } finally {
+      if (mounted) setState(() => _isHistoryLoading = false);
     }
   }
 
@@ -295,11 +252,6 @@ class _AppAsState extends State<AppAs> with SingleTickerProviderStateMixin {
       _showSnackBar('모든 항목을 입력해주세요.', isError: true);
       return;
     }
-    // 파일 첨부는 선택사항으로 변경
-    // if (_uploadFiles.isEmpty) {
-    //   _showSnackBar('사진을 첨부해주세요.', isError: true);
-    //   return;
-    // }
 
     setState(() => _isLoading = true);
     final studentId = context.read<StudentProvider>().studentId;
@@ -324,7 +276,7 @@ class _AppAsState extends State<AppAs> with SingleTickerProviderStateMixin {
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
-        print('🔧 AS 신청 API 응답: $data'); // 디버깅용 로그
+        print('🔧 AS 신청 API 응답: $data');
         if (data['success']) {
           final asUuid = data['as_uuid'];
 
@@ -368,7 +320,7 @@ class _AppAsState extends State<AppAs> with SingleTickerProviderStateMixin {
     } catch (e) {
       _showSnackBar('네트워크 오류: $e', isError: true);
     } finally {
-      setState(() => _isLoading = false);
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
@@ -406,9 +358,9 @@ class _AppAsState extends State<AppAs> with SingleTickerProviderStateMixin {
             backgroundColor: AppColors.card,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(20.r),
-            ), // ✅ r 적용!
+            ),
             child: Padding(
-              padding: EdgeInsets.all(24.0.w), // ✅ w 적용!
+              padding: EdgeInsets.all(24.0.w),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
@@ -423,7 +375,7 @@ class _AppAsState extends State<AppAs> with SingleTickerProviderStateMixin {
                       Icons.warning_amber_rounded,
                       color: AppColors.danger,
                       size: 40.sp,
-                    ), // ✅ sp 적용!
+                    ),
                   ),
                   SizedBox(height: 24.h),
                   Text(
@@ -435,14 +387,10 @@ class _AppAsState extends State<AppAs> with SingleTickerProviderStateMixin {
                     ),
                   ),
                   SizedBox(height: 12.h),
-                  // 긴 텍스트를 위한 유연한 레이아웃
                   ConstrainedBox(
-                    constraints: BoxConstraints(
-                      maxWidth: 280.w, // 다이얼로그 내부 최대 너비 설정
-                    ),
+                    constraints: BoxConstraints(maxWidth: 280.w),
                     child: Column(
                       children: [
-                        // 첫 번째 줄: 취소 질문
                         Text(
                           '정말로 신청을 취소하시겠습니까?',
                           textAlign: TextAlign.center,
@@ -452,7 +400,6 @@ class _AppAsState extends State<AppAs> with SingleTickerProviderStateMixin {
                           ),
                         ),
                         SizedBox(height: 8.h),
-                        // 두 번째 줄: 주의사항
                         Text(
                           '취소된 내역은 복구할 수 없습니다.',
                           textAlign: TextAlign.center,
@@ -685,9 +632,9 @@ class _AppAsState extends State<AppAs> with SingleTickerProviderStateMixin {
     );
   }
 
+  /// ✅ 신청내역: 당겨서 새로고침 적용
   Widget _buildRequestHistory() {
     if (_isHistoryLoading) {
-      // 로딩 중일 때 표시
       return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -706,49 +653,60 @@ class _AppAsState extends State<AppAs> with SingleTickerProviderStateMixin {
       );
     }
 
-    if (_requestHistory.isEmpty) {
-      // 데이터가 없을 때 표시
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.inbox_outlined,
-              size: 64.sp,
-              color: AppColors.textSecondary.withOpacity(0.5),
-            ),
-            SizedBox(height: 16.h),
-            Text(
-              'AS 신청 내역이 없습니다',
-              style: TextStyle(
-                fontSize: 18.sp,
-                fontWeight: FontWeight.bold,
-                color: AppColors.textSecondary,
+    return RefreshIndicator(
+      color: AppColors.primary,
+      onRefresh: _loadASRequests,
+      child:
+          _requestHistory.isEmpty
+              // 비어 있을 때도 당겨서 새로고침 되도록 AlwaysScrollable 적용
+              ? ListView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: EdgeInsets.symmetric(vertical: 48.h, horizontal: 16.w),
+                children: [
+                  Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.inbox_outlined,
+                        size: 64.sp,
+                        color: AppColors.textSecondary.withOpacity(0.5),
+                      ),
+                      SizedBox(height: 16.h),
+                      Text(
+                        'AS 신청 내역이 없습니다',
+                        style: TextStyle(
+                          fontSize: 18.sp,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.textSecondary,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                      SizedBox(height: 8.h),
+                      Text(
+                        '아래로 끌어당겨 새로고침하거나,\n첫 번째 탭에서 AS를 신청해보세요',
+                        style: TextStyle(
+                          fontSize: 14.sp,
+                          color: AppColors.textSecondary.withOpacity(0.7),
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ],
+                  ),
+                ],
+              )
+              : ListView.builder(
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: EdgeInsets.fromLTRB(16.w, 16.h, 16.w, 32.h),
+                itemCount: _requestHistory.length,
+                itemBuilder:
+                    (context, idx) => _buildStepCard(_requestHistory[idx]),
               ),
-            ),
-            SizedBox(height: 8.h),
-            Text(
-              '첫 번째 탭에서 AS를 신청해보세요',
-              style: TextStyle(
-                fontSize: 14.sp,
-                color: AppColors.textSecondary.withOpacity(0.7),
-              ),
-            ),
-          ],
-        ),
-      );
-    }
-
-    // 데이터가 있을 때 리스트 표시
-    return ListView.builder(
-      padding: EdgeInsets.fromLTRB(16.w, 16.h, 16.w, 32.h),
-      itemCount: _requestHistory.length,
-      itemBuilder: (context, idx) => _buildStepCard(_requestHistory[idx]),
     );
   }
 
   Widget _buildStepCard(Map<String, dynamic> req) {
     final status = req['stat'] ?? '신청';
+
     if (status == '수리완료' || status == '반려') {
       final bool isSuccess = status == '수리완료';
       return Card(
@@ -817,8 +775,10 @@ class _AppAsState extends State<AppAs> with SingleTickerProviderStateMixin {
         ),
       );
     }
+
     int currentStep = 0;
     if (status == '수리중') currentStep = 1;
+
     final List<Map<String, dynamic>> steps = [
       {
         'label': '신청',
@@ -836,6 +796,7 @@ class _AppAsState extends State<AppAs> with SingleTickerProviderStateMixin {
         'color': AppColors.success,
       },
     ];
+
     return Card(
       margin: EdgeInsets.only(bottom: 16.h),
       color: AppColors.card,
@@ -856,12 +817,11 @@ class _AppAsState extends State<AppAs> with SingleTickerProviderStateMixin {
                 if (status == '신청') {
                   color = idx == 0 ? AppColors.primary : Colors.grey.shade300;
                 } else if (status == '수리중') {
-                  if (idx == 1)
+                  if (idx == 1) {
                     color = AppColors.warning;
-                  else if (idx == 0)
+                  } else {
                     color = Colors.grey.shade300;
-                  else
-                    color = Colors.grey.shade300;
+                  }
                 } else {
                   color = Colors.grey.shade300;
                 }
@@ -1040,25 +1000,22 @@ class _AppAsState extends State<AppAs> with SingleTickerProviderStateMixin {
   Widget _infoItem(String label, String value) {
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
-      mainAxisSize: MainAxisSize.min, // 필요한 공간만 사용
+      mainAxisSize: MainAxisSize.min,
       children: [
         Text(
           label,
           style: TextStyle(
             color: AppColors.textSecondary,
-            fontSize: 12.sp, // 폰트 크기 약간 줄임
+            fontSize: 12.sp,
             fontWeight: FontWeight.w500,
           ),
-          overflow: TextOverflow.ellipsis, // 텍스트 오버플로우 처리
+          overflow: TextOverflow.ellipsis,
         ),
-        SizedBox(height: 2.h), // 간격 줄임
+        SizedBox(height: 2.h),
         Text(
           value,
-          style: TextStyle(
-            color: AppColors.textSecondary,
-            fontSize: 14.sp,
-          ), // 폰트 크기 약간 줄임
-          overflow: TextOverflow.ellipsis, // 텍스트 오버플로우 처리
+          style: TextStyle(color: AppColors.textSecondary, fontSize: 14.sp),
+          overflow: TextOverflow.ellipsis,
         ),
       ],
     );
@@ -1167,15 +1124,20 @@ class _CustomDropdown extends StatelessWidget {
       ),
       menuMaxHeight: 240.0.h,
       items:
-          items.map((item) {
-            return DropdownMenuItem<String>(
-              value: item,
-              child: Text(
-                item,
-                style: TextStyle(color: AppColors.textPrimary, fontSize: 16.sp),
-              ),
-            );
-          }).toList(),
+          items
+              .map(
+                (item) => DropdownMenuItem<String>(
+                  value: item,
+                  child: Text(
+                    item,
+                    style: TextStyle(
+                      color: AppColors.textPrimary,
+                      fontSize: 16.sp,
+                    ),
+                  ),
+                ),
+              )
+              .toList(),
       onChanged: onChanged,
       isExpanded: true,
       icon: Icon(
