@@ -47,7 +47,6 @@ class _AppHomeState extends State<AppHome> with WidgetsBindingObserver {
     WidgetsBinding.instance.addObserver(this);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _fetchDashboardData();
-      // HomeShell에 새로고침 콜백 등록
       widget.onRefreshRequested?.call(_fetchDashboardData);
     });
   }
@@ -62,16 +61,12 @@ class _AppHomeState extends State<AppHome> with WidgetsBindingObserver {
   void didChangeAppLifecycleState(AppLifecycleState state) {
     super.didChangeAppLifecycleState(state);
     if (state == AppLifecycleState.resumed) {
-      // 앱이 다시 포그라운드로 돌아올 때 데이터 새로고침
-      print('🔄 앱이 다시 활성화되어 대시보드 데이터를 새로고침합니다.');
       _fetchDashboardData();
     }
   }
 
   Future<void> _fetchDashboardData() async {
     setState(() => _isLoading = true);
-
-    // StudentProvider에서 실제 학생 ID 가져오기
     final studentProvider = Provider.of<StudentProvider>(
       context,
       listen: false,
@@ -79,17 +74,11 @@ class _AppHomeState extends State<AppHome> with WidgetsBindingObserver {
     final studentId = studentProvider.studentId;
 
     if (studentId == null) {
-      print('❌ 학생 ID가 없습니다. 로그인 페이지로 이동합니다.');
       Navigator.pushReplacementNamed(context, '/login');
       return;
     }
 
-    print('🔄 학생 ID: $studentId로 대시보드 데이터 로딩 시작...');
-
     try {
-      print('🔄 대시보드 데이터 로딩 시작...');
-
-      // API 병렬 호출
       final responses = await Future.wait([
         http.get(Uri.parse('http://localhost:5050/api/student/$studentId')),
         http.get(
@@ -115,172 +104,69 @@ class _AppHomeState extends State<AppHome> with WidgetsBindingObserver {
       ]);
 
       if (mounted) {
-        // 각 API 응답 상태 확인
-        print('📊 API 응답 상태:');
-        print('  - 학생 정보: ${responses[0].statusCode}');
-        print('  - 외박 현황: ${responses[1].statusCode}');
-        print('  - AS 현황: ${responses[2].statusCode}');
-        print('  - 상점 내역: ${responses[3].statusCode}');
-        print('  - 벌점 내역: ${responses[4].statusCode}');
-
-        // 학생 정보 처리
         if (responses[0].statusCode == 200) {
-          try {
-            final data = json.decode(responses[0].body);
-            print('👤 학생 정보 데이터: $data');
-
-            // success 키가 있는 경우와 없는 경우 모두 처리
-            if (data is Map<String, dynamic>) {
-              Map<String, dynamic> userData;
-
-              if (data.containsKey('success') && data['success'] == true) {
-                // 새로운 API 형식: {success: true, user: {...}}
-                userData = data['user'] ?? {};
-              } else if (data.containsKey('student_id')) {
-                // 기존 API 형식: {...} (직접 사용자 데이터)
-                userData = data;
-              } else {
-                print('❌ 학생 정보 형식이 올바르지 않습니다: $data');
-                userData = {};
-              }
-
-              if (userData.isNotEmpty) {
-                _studentName = userData['name']?.toString() ?? '학생';
-                _dormBuilding = userData['dorm_building']?.toString() ?? '기숙사';
-                _dormRoom = userData['room_num']?.toString() ?? '호실';
-                print(
-                  '✅ 학생 정보 설정 완료: $_studentName, $_dormBuilding $_dormRoom',
-                );
-              } else {
-                print('❌ 학생 정보가 비어있습니다');
-              }
+          final data = json.decode(responses[0].body);
+          if (data is Map<String, dynamic>) {
+            Map<String, dynamic> userData;
+            if (data.containsKey('success') && data['success'] == true) {
+              userData = data['user'] ?? {};
+            } else if (data.containsKey('student_id')) {
+              userData = data;
             } else {
-              print('❌ 학생 정보 응답이 올바른 형식이 아닙니다');
+              userData = {};
             }
-          } catch (e) {
-            print('❌ 학생 정보 파싱 오류: $e');
+            if (userData.isNotEmpty) {
+              _studentName = userData['name']?.toString() ?? '학생';
+              _dormBuilding = userData['dorm_building']?.toString() ?? '기숙사';
+              _dormRoom = userData['room_num']?.toString() ?? '호실';
+            }
           }
-        } else {
-          print('❌ 학생 정보 API 오류: ${responses[0].statusCode}');
         }
 
-        // 외박 현황 처리
         if (responses[1].statusCode == 200) {
-          try {
-            final data = json.decode(responses[1].body);
-            print('🏠 외박 현황 데이터: $data');
-            _outingApproved = data['approved'] ?? 0;
-            _outingPending = data['pending'] ?? 0;
-            print('✅ 외박 현황 설정 완료: 승인 $_outingApproved, 대기 $_outingPending');
-          } catch (e) {
-            print('❌ 외박 현황 파싱 오류: $e');
-          }
-        } else {
-          print('❌ 외박 현황 API 오류: ${responses[1].statusCode}');
+          final data = json.decode(responses[1].body);
+          _outingApproved = data['approved'] ?? 0;
+          _outingPending = data['pending'] ?? 0;
         }
-
-        // AS 현황 처리
         if (responses[2].statusCode == 200) {
-          try {
-            final data = json.decode(responses[2].body);
-            print('🔧 AS 현황 데이터: $data');
-            // 전체 AS 신청 건수 표시 (신청됨 + 처리중 + 완료)
-            _asInProgress = data['total'] ?? 0;
-            print('✅ AS 현황 설정 완료: 전체 $_asInProgress건');
-          } catch (e) {
-            print('❌ AS 현황 파싱 오류: $e');
-          }
-        } else {
-          print('❌ AS 현황 API 오류: ${responses[2].statusCode}');
+          final data = json.decode(responses[2].body);
+          _asInProgress = data['total'] ?? 0;
         }
 
-        // 상벌점 합계 계산
         int totalPoints = 0;
         if (responses[3].statusCode == 200) {
-          try {
-            final data = json.decode(responses[3].body);
-            print('⭐ 상점 데이터: $data');
-
-            List<dynamic> pointsData = [];
-
-            if (data is Map<String, dynamic> &&
-                data.containsKey('success') &&
-                data['success'] == true) {
-              // 새로운 API 형식: {success: true, points: [...]}
-              pointsData = data['points'] ?? [];
-            } else if (data is List<dynamic>) {
-              // 기존 API 형식: [...] (직접 배열)
-              pointsData = data;
-            } else {
-              print('❌ 상점 데이터 형식이 올바르지 않습니다: ${data.runtimeType}');
-            }
-
-            for (var point in pointsData) {
-              if (point is Map<String, dynamic>) {
-                final score = point['score'];
-                if (score is int) {
-                  totalPoints += score;
-                } else if (score is String) {
-                  totalPoints += int.tryParse(score) ?? 0;
-                }
-              }
-            }
-          } catch (e) {
-            print('❌ 상점 데이터 파싱 오류: $e');
+          final data = json.decode(responses[3].body);
+          final list =
+              (data is Map && data['success'] == true)
+                  ? (data['points'] ?? [])
+                  : (data is List ? data : []);
+          for (final p in list) {
+            final s = p['score'];
+            if (s is int) totalPoints += s;
+            if (s is String) totalPoints += int.tryParse(s) ?? 0;
           }
-        } else {
-          print('❌ 상점 API 오류: ${responses[3].statusCode}');
         }
-
         if (responses[4].statusCode == 200) {
-          try {
-            final data = json.decode(responses[4].body);
-            print('⚠️ 벌점 데이터: $data');
-
-            List<dynamic> pointsData = [];
-
-            if (data is Map<String, dynamic> &&
-                data.containsKey('success') &&
-                data['success'] == true) {
-              // 새로운 API 형식: {success: true, points: [...]}
-              pointsData = data['points'] ?? [];
-            } else if (data is List<dynamic>) {
-              // 기존 API 형식: [...] (직접 배열)
-              pointsData = data;
-            } else {
-              print('❌ 벌점 데이터 형식이 올바르지 않습니다: ${data.runtimeType}');
-            }
-
-            for (var point in pointsData) {
-              if (point is Map<String, dynamic>) {
-                final score = point['score'];
-                if (score is int) {
-                  totalPoints += score;
-                } else if (score is String) {
-                  totalPoints += int.tryParse(score) ?? 0;
-                }
-              }
-            }
-          } catch (e) {
-            print('❌ 벌점 데이터 파싱 오류: $e');
+          final data = json.decode(responses[4].body);
+          final list =
+              (data is Map && data['success'] == true)
+                  ? (data['points'] ?? [])
+                  : (data is List ? data : []);
+          for (final p in list) {
+            final s = p['score'];
+            if (s is int) totalPoints += s;
+            if (s is String) totalPoints += int.tryParse(s) ?? 0;
           }
-        } else {
-          print('❌ 벌점 API 오류: ${responses[4].statusCode}');
         }
-
         _totalPoints = totalPoints;
-        print('✅ 총 상벌점: $_totalPoints');
-        print('🎉 대시보드 데이터 로딩 완료!');
       }
     } catch (e) {
-      print('💥 대시보드 데이터 로딩 중 예외 발생: $e');
-      print('📍 예외 타입: ${e.runtimeType}');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('데이터 로딩 실패: $e'),
             backgroundColor: Colors.red,
-            duration: Duration(seconds: 5),
+            duration: const Duration(seconds: 5),
           ),
         );
       }
@@ -290,7 +176,6 @@ class _AppHomeState extends State<AppHome> with WidgetsBindingObserver {
   }
 
   Future<void> _handleRollCall() async {
-    // StudentProvider에서 실제 학생 ID 가져오기
     final studentProvider = Provider.of<StudentProvider>(
       context,
       listen: false,
@@ -308,11 +193,9 @@ class _AppHomeState extends State<AppHome> with WidgetsBindingObserver {
     }
 
     try {
-      // 점호 시간 확인
       final timeResponse = await http.get(
         Uri.parse('http://localhost:5050/api/rollcall/is-time'),
       );
-
       if (timeResponse.statusCode == 200) {
         final timeData = json.decode(timeResponse.body);
         if (!timeData['is_rollcall_time']) {
@@ -342,11 +225,10 @@ class _AppHomeState extends State<AppHome> with WidgetsBindingObserver {
         }
       }
 
-      Position position = await Geolocator.getCurrentPosition(
+      final position = await Geolocator.getCurrentPosition(
         desiredAccuracy: LocationAccuracy.high,
       );
 
-      // 실제 점호 API 호출
       final response = await http.post(
         Uri.parse('http://localhost:5050/api/rollcall/check'),
         headers: {'Content-Type': 'application/json'},
@@ -362,12 +244,10 @@ class _AppHomeState extends State<AppHome> with WidgetsBindingObserver {
         if (data['success']) {
           final distance = data['distance'];
           final building = data['building_name'] ?? '기숙사';
-          String distanceStr;
-          if (distance < 1000) {
-            distanceStr = '${distance.toStringAsFixed(0)}m';
-          } else {
-            distanceStr = '${(distance / 1000).toStringAsFixed(2)}km';
-          }
+          String distanceStr =
+              distance < 1000
+                  ? '${distance.toStringAsFixed(0)}m'
+                  : '${(distance / 1000).toStringAsFixed(2)}km';
 
           if (data['message'].contains('면제')) {
             _showInfoDialog(
@@ -458,84 +338,188 @@ class _AppHomeState extends State<AppHome> with WidgetsBindingObserver {
     );
   }
 
+  /// ✅ 알림 팝업
   void _showNotificationsDialog() {
+    final media = MediaQuery.of(context);
     showDialog(
       context: context,
       builder:
-          (context) => AlertDialog(
-            backgroundColor: Colors.white,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16.r),
+          (context) => MediaQuery(
+            data: media.copyWith(textScaler: const TextScaler.linear(1.0)),
+            child: Dialog(
+              backgroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20.r),
+              ),
+              child: Padding(
+                padding: EdgeInsets.symmetric(vertical: 20.h, horizontal: 18.w),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Padding(
+                      padding: EdgeInsets.only(left: 2.w, bottom: 10.h),
+                      child: Text(
+                        '알림',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w700,
+                          fontSize: 20.sp,
+                          color: const Color(0xFF34495E),
+                        ),
+                      ),
+                    ),
+                    Flexible(
+                      child: ListView.separated(
+                        shrinkWrap: true,
+                        itemCount: 2,
+                        separatorBuilder:
+                            (_, __) => Divider(
+                              height: 14.h,
+                              color: const Color(0xFFF0F2F5),
+                            ),
+                        itemBuilder: (context, index) {
+                          if (index == 0) {
+                            return _oneLineNotificationItem(
+                              icon: Icons.check_circle,
+                              color: AppColors.success,
+                              title: '외박 신청이 승인되었습니다.',
+                              subtitle: '집 - 졸려요...',
+                              timestamp: '오늘',
+                              onDelete: () {},
+                            );
+                          } else {
+                            return _oneLineNotificationItem(
+                              icon: Icons.cancel,
+                              color: AppColors.danger,
+                              title: '외박 신청이 반려되었습니다.',
+                              subtitle: '집 - 너무 피곤해요...',
+                              timestamp: '오늘',
+                              onDelete: () {},
+                            );
+                          }
+                        },
+                      ),
+                    ),
+                    SizedBox(height: 16.h),
+                    ElevatedButton(
+                      onPressed: () => Navigator.of(context).pop(),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF4A69E2),
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14.r),
+                        ),
+                        padding: EdgeInsets.symmetric(vertical: 12.h),
+                      ),
+                      child: Text(
+                        '닫기',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w700,
+                          fontSize: 16.sp,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             ),
-            title: const Text(
-              '알림',
-              style: TextStyle(fontWeight: FontWeight.bold),
-            ),
-            content: SizedBox(
-              width: double.maxFinite,
-              child: ListView(
-                shrinkWrap: true,
+          ),
+    );
+  }
+
+  /// 🔧 알림 한 줄 아이템 (아이콘/닫기 버튼 축소 + 제목 가변 축소)
+  /// 🔧 아주 작은 아이콘 + 닫기 버튼(초소형) + 제목은 폭에 맞춰 자동 축소(… 제거)
+  Widget _oneLineNotificationItem({
+    required IconData icon,
+    required Color color,
+    required String title,
+    required String subtitle,
+    required String timestamp,
+    VoidCallback? onDelete,
+  }) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // ▶ 왼쪽 상태 아이콘: 초소형
+        Container(
+          width: 14.w, // 정말 작게
+          height: 14.w, // 정말 작게
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: color.withOpacity(0.12),
+          ),
+          alignment: Alignment.center,
+          child: Icon(icon, color: color, size: 10.sp), // 진짜 작게
+        ),
+        SizedBox(width: 6.w),
+
+        // ▶ 텍스트 영역
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // 제목: 한 줄 유지 + 남은 폭에 맞춰 자동 축소 (… 안 뜸)
+              Row(
                 children: [
-                  ListTile(
-                    leading: Icon(
-                      Icons.check_circle,
-                      color: AppColors.success,
-                      size: 24.sp,
-                    ),
-                    title: Text(
-                      '외박 신청이 승인되었습니다.',
-                      style: TextStyle(fontSize: 15.sp),
-                    ),
-                    subtitle: Text(
-                      '2025-06-22',
-                      style: TextStyle(fontSize: 13.sp),
-                    ),
-                  ),
-                  Divider(),
-                  ListTile(
-                    leading: Icon(
-                      Icons.build,
-                      color: AppColors.warning,
-                      size: 24.sp,
-                    ),
-                    title: Text(
-                      'A/S 요청이 접수되었습니다.',
-                      style: TextStyle(fontSize: 15.sp),
-                    ),
-                    subtitle: Text(
-                      '2025-06-21',
-                      style: TextStyle(fontSize: 13.sp),
-                    ),
-                  ),
-                  Divider(),
-                  ListTile(
-                    leading: Icon(
-                      Icons.info,
-                      color: AppColors.primary,
-                      size: 24.sp,
-                    ),
-                    title: Text(
-                      '새로운 공지사항이 등록되었습니다.',
-                      style: TextStyle(fontSize: 15.sp),
-                    ),
-                    subtitle: Text(
-                      '2025-06-20',
-                      style: TextStyle(fontSize: 13.sp),
+                  Expanded(
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        title, // 예: '외박 신청이 승인되었습니다.'
+                        softWrap: false, // 한 줄 고정
+                        style: TextStyle(
+                          color: AppColors.textPrimary,
+                          fontWeight: FontWeight.w600,
+                          fontSize: 15.sp,
+                        ),
+                      ),
                     ),
                   ),
                 ],
               ),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text(
-                  '닫기',
-                  style: TextStyle(fontWeight: FontWeight.bold),
+              SizedBox(height: 3.h),
+
+              // 부제목
+              Text(
+                subtitle,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: AppColors.textSecondary,
+                  fontSize: 13.sp,
+                ),
+              ),
+              SizedBox(height: 4.h),
+
+              // 시간
+              Text(
+                timestamp,
+                style: TextStyle(
+                  color: AppColors.textSecondary.withOpacity(0.8),
+                  fontSize: 11.sp,
                 ),
               ),
             ],
           ),
+        ),
+
+        // ▶ 닫기(X) 버튼: 초소형 (IconButton 대신 InkWell로 최소 크기 제약 제거)
+        if (onDelete != null)
+          InkWell(
+            onTap: onDelete,
+            borderRadius: BorderRadius.circular(4.r),
+            child: SizedBox(
+              width: 8.w, // 정말 작게
+              height: 8.w, // 정말 작게
+              child: Icon(
+                Icons.close,
+                size: 12.sp, // 진짜 작게
+                color: const Color(0xFFB0B8C1),
+              ),
+            ),
+          ),
+      ],
     );
   }
 
@@ -547,9 +531,12 @@ class _AppHomeState extends State<AppHome> with WidgetsBindingObserver {
   }) {
     showDialog(
       context: context,
-      builder:
-          (_) => Dialog(
-            backgroundColor: AppColors.card,
+      builder: (ctx) {
+        return MediaQuery(
+          data: MediaQuery.of(
+            ctx,
+          ).copyWith(textScaler: const TextScaler.linear(1.0)),
+          child: Dialog(
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(20.r),
             ),
@@ -558,30 +545,29 @@ class _AppHomeState extends State<AppHome> with WidgetsBindingObserver {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Container(
-                    width: 72.w,
-                    height: 72.w,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: iconColor.withOpacity(0.1),
-                    ),
-                    child: Icon(icon, color: iconColor, size: 40.sp),
-                  ),
-                  SizedBox(height: 24.h),
                   Text(
                     title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    textScaler: const TextScaler.linear(1.0),
                     style: TextStyle(
-                      fontSize: 20.sp,
-                      fontWeight: FontWeight.bold,
+                      fontSize: 13.sp,
+                      fontWeight: FontWeight.w500,
                       color: AppColors.textPrimary,
+                      letterSpacing: -0.2,
                     ),
                   ),
                   SizedBox(height: 12.h),
                   Text(
                     message,
                     textAlign: TextAlign.center,
+                    maxLines: 3,
+                    overflow: TextOverflow.ellipsis,
+                    textScaler: const TextScaler.linear(1.0),
                     style: TextStyle(
-                      fontSize: 15.sp,
+                      fontSize: 14.sp,
+                      fontWeight: FontWeight.w400,
+                      height: 1.3,
                       color: AppColors.textSecondary,
                     ),
                   ),
@@ -589,7 +575,7 @@ class _AppHomeState extends State<AppHome> with WidgetsBindingObserver {
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton(
-                      onPressed: () => Navigator.pop(context),
+                      onPressed: () => Navigator.pop(ctx),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppColors.primary,
                         padding: EdgeInsets.symmetric(vertical: 12.h),
@@ -599,10 +585,11 @@ class _AppHomeState extends State<AppHome> with WidgetsBindingObserver {
                       ),
                       child: Text(
                         '확인',
+                        textScaler: const TextScaler.linear(1.0),
                         style: TextStyle(
                           color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 16.sp,
+                          fontWeight: FontWeight.w700,
+                          fontSize: 15.sp,
                         ),
                       ),
                     ),
@@ -611,6 +598,8 @@ class _AppHomeState extends State<AppHome> with WidgetsBindingObserver {
               ),
             ),
           ),
+        );
+      },
     );
   }
 
@@ -630,7 +619,7 @@ class _AppHomeState extends State<AppHome> with WidgetsBindingObserver {
                 child: SizedBox(
                   height: 60.h,
                   width: 60.h,
-                  child: CircularProgressIndicator(),
+                  child: const CircularProgressIndicator(),
                 ),
               )
               : RefreshIndicator(
@@ -709,6 +698,13 @@ class _AppHomeState extends State<AppHome> with WidgetsBindingObserver {
                         ],
                       ),
                       SizedBox(height: 24.h),
+                      Center(
+                        child: OutlinedButton.icon(
+                          onPressed: _showNotificationsDialog,
+                          icon: const Icon(Icons.notifications_outlined),
+                          label: const Text('알림 보기'),
+                        ),
+                      ),
                     ],
                   ),
                 ),
@@ -852,7 +848,6 @@ class _AppHomeState extends State<AppHome> with WidgetsBindingObserver {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // 1. 아이콘 + 제목 부분만 따로
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -861,7 +856,7 @@ class _AppHomeState extends State<AppHome> with WidgetsBindingObserver {
                     backgroundColor: color.withOpacity(0.1),
                     child: Icon(icon, color: color, size: 24.sp),
                   ),
-                  SizedBox(height: 30.h), // ← 이게 진짜 아이콘~제목 사이 간격
+                  SizedBox(height: 30.h),
                   Text(
                     title,
                     style: TextStyle(
@@ -872,8 +867,7 @@ class _AppHomeState extends State<AppHome> with WidgetsBindingObserver {
                   ),
                 ],
               ),
-              SizedBox(height: 8.h), // 아이콘+제목 아래 전체 내용과의 간격
-              // 2. 아래쪽 Flexible로 값/상세 내용
+              SizedBox(height: 8.h),
               Text(
                 value,
                 style: TextStyle(

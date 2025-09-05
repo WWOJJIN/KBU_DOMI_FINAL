@@ -231,49 +231,49 @@ class CustomNotificationDialog extends StatelessWidget {
       final date = DateTime.parse(dateString);
       final notificationDate = DateTime(date.year, date.month, date.day);
       final difference = today.difference(notificationDate).inDays;
-      if (difference == 0) {
-        return '오늘';
-      } else if (difference == 1) {
-        return '어제';
-      } else if (difference > 1 && difference < 30) {
-        return '$difference일 전';
-      } else {
-        return dateString;
-      }
-    } catch (e) {
+      if (difference == 0) return '오늘';
+      if (difference == 1) return '어제';
+      if (difference > 1 && difference < 30) return '$difference일 전';
+      return dateString;
+    } catch (_) {
       return dateString;
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    // (선택) 시스템 글자 확대가 너무 커서 줄바꿈이 생기면 주석 해제
+    // final media = MediaQuery.of(context);
+    // return MediaQuery(
+    //   data: media.copyWith(textScaler: const TextScaler.linear(1.0)),
+    //   child: _buildDialog(context),
+    // );
+
+    return _buildDialog(context);
+  }
+
+  Widget _buildDialog(BuildContext context) {
     return Dialog(
       backgroundColor: Colors.white,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(20.r), // ✅ r 적용
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20.r)),
       child: Padding(
-        padding: EdgeInsets.symmetric(
-          vertical: 24.h,
-          horizontal: 20.w,
-        ), // ✅ h, w 적용
+        padding: EdgeInsets.symmetric(vertical: 24.h, horizontal: 20.w),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // --- 헤더 ---
             Padding(
               padding: EdgeInsets.only(left: 4.w, bottom: 16.h),
               child: Text(
                 '알림',
                 style: TextStyle(
                   fontWeight: FontWeight.bold,
-                  fontSize: 22.sp, // ✅ sp 적용
+                  fontSize: 22.sp,
                   color: const Color(0xFF34495E),
                 ),
               ),
             ),
-            // --- 알림 목록 or "없음" 메시지 ---
+
             notifications.isEmpty
                 ? _buildEmptyState()
                 : Flexible(
@@ -296,23 +296,33 @@ class CustomNotificationDialog extends StatelessWidget {
                             ),
                           ),
                           SizedBox(width: 16.w),
-                          // 내용
+
+                          // 내용(한 줄 고정 + 말줄임 적용)
                           Expanded(
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
+                                // ✅ 제목 한 줄 + 말줄임 + 줄바꿈 금지
                                 Text(
                                   item.title,
+                                  maxLines: 1,
+                                  softWrap: false,
+                                  overflow: TextOverflow.ellipsis,
                                   style: TextStyle(
                                     color: const Color(0xFF34495E),
                                     fontSize: 15.sp,
-                                    fontWeight: FontWeight.w500,
+                                    fontWeight: FontWeight.w600,
+                                    height: 1.1,
                                   ),
                                 ),
                                 if (item.subtitle.isNotEmpty) ...[
                                   SizedBox(height: 2.h),
+                                  // ✅ 부제도 한 줄 고정
                                   Text(
                                     item.subtitle,
+                                    maxLines: 1,
+                                    softWrap: false,
+                                    overflow: TextOverflow.ellipsis,
                                     style: TextStyle(
                                       fontSize: 13.sp,
                                       color: const Color(0xFF5D6D7E),
@@ -322,6 +332,9 @@ class CustomNotificationDialog extends StatelessWidget {
                                 SizedBox(height: 4.h),
                                 Text(
                                   _formatDate(item.date),
+                                  maxLines: 1,
+                                  softWrap: false,
+                                  overflow: TextOverflow.ellipsis,
                                   style: TextStyle(
                                     color: const Color(0xFF7F8C8D),
                                     fontSize: 12.sp,
@@ -330,6 +343,7 @@ class CustomNotificationDialog extends StatelessWidget {
                               ],
                             ),
                           ),
+
                           // X 버튼
                           IconButton(
                             icon: Icon(
@@ -345,14 +359,16 @@ class CustomNotificationDialog extends StatelessWidget {
                       );
                     },
                     separatorBuilder:
-                        (context, index) => Divider(
+                        (_, __) => Divider(
                           height: 1.h,
                           color: const Color(0xFFF0F2F5),
                         ),
                   ),
                 ),
+
             SizedBox(height: 24.h),
-            // --- 닫기 버튼 ---
+
+            // 닫기 버튼
             ElevatedButton(
               onPressed: () => Navigator.of(context).pop(),
               style: ElevatedButton.styleFrom(
@@ -374,7 +390,6 @@ class CustomNotificationDialog extends StatelessWidget {
     );
   }
 
-  // 알림이 없을 때 보여줄 위젯
   Widget _buildEmptyState() {
     return Container(
       padding: EdgeInsets.symmetric(vertical: 40.h),
