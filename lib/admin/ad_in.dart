@@ -624,70 +624,29 @@ class _AdInPageState extends State<AdInPage>
           builder:
               (dialogContext) => AlertDialog(
                 backgroundColor: Colors.white,
-                surfaceTintColor: Colors.white,
-                alignment: Alignment.center,
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12.r),
+                  borderRadius: BorderRadius.circular(8.r),
                 ),
-                // 패딩을 조금 다듬어 정렬감 개선
-                titlePadding: EdgeInsets.fromLTRB(24.w, 20.h, 24.w, 0),
-                contentPadding: EdgeInsets.fromLTRB(24.w, 12.h, 24.w, 0),
-                actionsPadding: EdgeInsets.fromLTRB(16.w, 12.h, 16.w, 16.h),
-
-                // ▼ 제목 가운데 정렬
-                title: Center(
-                  child: Text(
-                    '자동 배정 완료',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 18.sp,
-                      color: AppColors.fontPrimary,
-                      letterSpacing: -0.3,
-                    ),
+                title: Text(
+                  '자동 배정 완료',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 18.sp,
+                    color: AppColors.fontPrimary,
                   ),
                 ),
-
-                // ▼ 내용도 가운데 정렬
-                content: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      result['message'] ?? '방 배정이 완료되었습니다.',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontSize: 14.sp,
-                        height: 1.4,
-                        color: AppColors.fontSecondary,
-                      ),
-                    ),
-                  ],
+                content: Text(
+                  result['message'] ?? '방 배정이 완료되었습니다.',
+                  style: TextStyle(color: AppColors.fontSecondary),
                 ),
-
-                // ▼ 버튼 가운데 정렬
-                actionsAlignment: MainAxisAlignment.center,
                 actions: [
-                  SizedBox(
-                    width: 120.w,
-                    child: ElevatedButton(
-                      onPressed: () => Navigator.of(dialogContext).pop(),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.statusConfirmed,
-                        foregroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8.r),
-                        ),
-                        padding: EdgeInsets.symmetric(vertical: 12.h),
-                        elevation: 0,
-                      ),
-                      child: Text(
-                        '확인',
-                        style: TextStyle(
-                          fontSize: 14.sp,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
+                  ElevatedButton(
+                    onPressed: () => Navigator.of(dialogContext).pop(),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.statusConfirmed,
+                      foregroundColor: Colors.white,
                     ),
+                    child: const Text('확인'),
                   ),
                 ],
               ),
@@ -1665,7 +1624,7 @@ class _AdInPageState extends State<AdInPage>
         } else {
           cardColor = Colors.white;
           textColor = AppColors.fontPrimary;
-          onTapCallback = () => _showStudentsForRoomAssignment(context, room);
+          onTapCallback = () => _showOccupancyDetails(context, room);
         }
         return InkWell(
           borderRadius: BorderRadius.circular(8.r),
@@ -1886,6 +1845,11 @@ class _AdInPageState extends State<AdInPage>
                 color: AppColors.fontPrimary,
               ),
             ),
+            if (!_isEditMode)
+              TextButton(
+                onPressed: () => setState(() => _isEditMode = true),
+                child: const Text('작성'),
+              ),
           ],
         ),
         SizedBox(height: 8.h),
