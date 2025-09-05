@@ -94,34 +94,105 @@ class _AdRoomStatusPageState extends State<AdRoomStatusPage> {
   // 룸메이트 조회 리스트에 표시될 항목을 필터링하는 함수
   List<Map<String, dynamic>> _getOnlyRoommatePairs() {
     final filtered = _filteredApplications;
+
+    print('🔍 _getOnlyRoommatePairs - 전체 신청서: ${filtered.length}개');
+
     // pairId가 있고, roommateType이 'mutual'인 경우만 룸메이트 목록에 표시
     final roommateApplicants =
-        filtered
-            .where(
-              (app) => app['pairId'] != null && app['roommateType'] == 'mutual',
-            )
-            .toList();
+        filtered.where((app) {
+          final hasPairId = app['pairId'] != null;
+          final isMutual = app['roommateType'] == 'mutual';
+
+          if (hasPairId && isMutual) {
+            print(
+              '✅ 룸메이트 발견: ${app['studentName']} (${app['studentId']}) - pairId: ${app['pairId']}, type: ${app['roommateType']}',
+            );
+          }
+
+          return hasPairId && isMutual;
+        }).toList();
+    print('🔍 룸메이트 신청자 수: ${roommateApplicants.length}개');
+
     final Map<String, List<Map<String, dynamic>>> pairsById = {};
 
     for (var app in roommateApplicants) {
       final pairId = app['pairId'];
       if (pairId != null) {
         pairsById.putIfAbsent(pairId, () => []).add(app);
+        print('🔍 pairId $pairId에 ${app['studentName']} 추가');
       }
     }
 
+    print('🔍 그룹화된 pairId 수: ${pairsById.length}개');
+
     final List<Map<String, dynamic>> result = [];
     pairsById.forEach((pairId, pairList) {
+      print('🔍 pairId $pairId: ${pairList.length}명');
+
       if (pairList.length == 2) {
+        // 정상적인 쌍 (2명)
         result.add({
           'isPair': true,
           'student1': pairList[0],
           'student2': pairList[1],
         });
+        print(
+          '✅ 룸메이트 쌍 생성: ${pairList[0]['studentName']} ↔ ${pairList[1]['studentName']}',
+        );
+      } else if (pairList.length == 1 &&
+          pairList[0]['roommateType'] == 'mutual') {
+        // mutual 타입의 단일 요청 - 파트너 정보를 찾아서 쌍 생성
+        final mainStudent = pairList[0];
+
+        // 같은 pairId를 가진 다른 학생을 전체 applications에서 찾기
+        final partnerId = _getPartnerIdFromRoommateData(mainStudent);
+        if (partnerId != null) {
+          final partnerStudent = _createPartnerStudentData(
+            partnerId,
+            mainStudent,
+          );
+          if (partnerStudent != null) {
+            result.add({
+              'isPair': true,
+              'student1': mainStudent,
+              'student2': partnerStudent,
+            });
+            print(
+              '✅ Mutual 룸메이트 쌍 생성: ${mainStudent['studentName']} ↔ ${partnerStudent['studentName']}',
+            );
+          }
+        }
+      } else {
+        print('⚠️ pairId $pairId는 ${pairList.length}명이므로 쌍이 아님');
       }
     });
 
+    print('🔍 최종 룸메이트 쌍 수: ${result.length}개');
     return result;
+  }
+
+  // mutual 룸메이트의 파트너 ID를 찾는 헬퍼 함수
+  String? _getPartnerIdFromRoommateData(Map<String, dynamic> student) {
+    // student 데이터에 저장된 파트너 ID 반환
+    return student['roommatePartnerId'];
+  }
+
+  // 파트너 학생 데이터를 생성하는 헬퍼 함수
+  Map<String, dynamic>? _createPartnerStudentData(
+    String partnerId,
+    Map<String, dynamic> mainStudent,
+  ) {
+    // ApplicationDataService.applications에서 파트너 찾기
+    final partnerApp = ApplicationDataService.applications.firstWhere(
+      (app) => app['studentId'] == partnerId,
+      orElse: () => {},
+    );
+
+    if (partnerApp.isNotEmpty) {
+      return partnerApp;
+    }
+
+    return null;
   }
 
   void _updateSelection() {

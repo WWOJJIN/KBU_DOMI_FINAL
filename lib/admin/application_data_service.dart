@@ -45,6 +45,9 @@ class ApplicationDataService {
       applications = futures[0];
       dormRooms = futures[1];
 
+      // 룸메이트 정보 업데이트
+      await updateRoommateInfo();
+
       log(
         '✅ 데이터 로딩 완료 - 신청서: ${applications.length}개, 방: ${dormRooms.length}개',
       );
@@ -114,6 +117,8 @@ class ApplicationDataService {
                     : null,
             'pairId': null, // 룸메이트 정보는 별도 API에서 가져와야 함
             'roommateType': null,
+            'roommatePartnerId': null, // 룸메이트 파트너 ID
+            'roommatePartnerName': null, // 룸메이트 파트너 이름
             // 서류 정보 추가
             'documents': item['documents'] ?? [],
             // 학생 상세 정보 추가
@@ -226,6 +231,8 @@ class ApplicationDataService {
   /// 룸메이트 정보 업데이트 (별도 API 호출)
   static Future<void> updateRoommateInfo() async {
     try {
+      log('📡 룸메이트 정보 로딩 시작...');
+
       final response = await http.get(
         Uri.parse('$_baseUrl/api/admin/roommate/requests'),
         headers: {'Content-Type': 'application/json'},
@@ -234,26 +241,91 @@ class ApplicationDataService {
       if (response.statusCode == 200) {
         final List<dynamic> data = json.decode(response.body);
 
-        // 룸메이트 관계 정보를 applications에 업데이트
-        for (var roommateData in data) {
-          if (roommateData['status'] == 'accepted') {
-            final requesterId = roommateData['requester_id']?.toString();
-            final targetId = roommateData['target_id']?.toString();
-            final pairId = '${requesterId}_${targetId}';
+        log('📡 룸메이트 API 응답: ${data.length}개 그룹');
 
-            // 신청자와 대상자 모두 업데이트
-            for (var app in applications) {
-              if (app['studentId'] == requesterId ||
-                  app['studentId'] == targetId) {
-                app['pairId'] = pairId;
-                app['roommateType'] = 'mutual';
+        // 룸메이트 관계 정보를 applications에 업데이트
+        for (var pairGroup in data) {
+          final String pairId = pairGroup['pair_id']?.toString() ?? '';
+          final String roommateType =
+              pairGroup['roommate_type']?.toString() ?? '';
+
+          // 각 그룹의 요청들 처리
+          if (pairGroup['requests'] != null &&
+              pairGroup['requests'].isNotEmpty) {
+            // mutual 타입인 경우 단일 요청이라도 양방향으로 처리
+            if (roommateType == 'mutual' && pairGroup['requests'].length == 1) {
+              final requestData = pairGroup['requests'][0];
+              final String applicantId =
+                  requestData['applicant_id']?.toString() ?? '';
+              final String partnerId =
+                  requestData['partner_id']?.toString() ?? '';
+              final String applicantName =
+                  requestData['applicant_name']?.toString() ?? '';
+              final String partnerName =
+                  requestData['partner_name']?.toString() ?? '';
+
+              log(
+                '📡 Mutual 룸메이트 관계 (단일 요청): $applicantId ↔ $partnerId (pairId: $pairId)',
+              );
+
+              // 양방향으로 모두 업데이트
+              for (var app in applications) {
+                if (app['studentId'] == applicantId) {
+                  app['pairId'] = pairId;
+                  app['roommateType'] = roommateType;
+                  app['roommatePartnerId'] = partnerId;
+                  app['roommatePartnerName'] = partnerName;
+
+                  log(
+                    '✅ Mutual 룸메이트 - 신청자 ${app['studentId']} (${app['studentName']})에 룸메이트 정보 추가: partner=$partnerId',
+                  );
+                } else if (app['studentId'] == partnerId) {
+                  app['pairId'] = pairId;
+                  app['roommateType'] = roommateType;
+                  app['roommatePartnerId'] = applicantId;
+                  app['roommatePartnerName'] = applicantName;
+
+                  log(
+                    '✅ Mutual 룸메이트 - 파트너 ${app['studentId']} (${app['studentName']})에 룸메이트 정보 추가: partner=$applicantId',
+                  );
+                }
+              }
+            } else {
+              // 일반적인 처리 (복수 요청 또는 non-mutual)
+              for (var requestData in pairGroup['requests']) {
+                final String applicantId =
+                    requestData['applicant_id']?.toString() ?? '';
+                final String partnerId =
+                    requestData['partner_id']?.toString() ?? '';
+
+                log(
+                  '📡 룸메이트 관계 업데이트: $applicantId ↔ $partnerId (pairId: $pairId, type: $roommateType)',
+                );
+
+                // 신청자와 파트너 모두 업데이트
+                for (var app in applications) {
+                  if (app['studentId'] == applicantId ||
+                      app['studentId'] == partnerId) {
+                    app['pairId'] = pairId;
+                    app['roommateType'] = roommateType;
+
+                    log(
+                      '✅ 학생 ${app['studentId']} (${app['studentName']})에 룸메이트 정보 추가: pairId=$pairId, type=$roommateType',
+                    );
+                  }
+                }
               }
             }
           }
         }
+
+        // 룸메이트 관계가 있는 학생들 수 확인
+        final roommateCount =
+            applications.where((app) => app['pairId'] != null).length;
+        log('✅ 룸메이트 정보 업데이트 완료: ${roommateCount}명의 학생에 룸메이트 관계 적용');
       }
     } catch (e) {
-      log('룸메이트 정보 업데이트 실패: $e');
+      log('❌ 룸메이트 정보 업데이트 실패: $e');
     }
   }
 

@@ -108,31 +108,6 @@ class _AdDashPageState extends State<AdDashPage> {
     }
   }
 
-  Widget _th(String text) => Container(
-    padding: EdgeInsets.symmetric(vertical: 12.h),
-    alignment: Alignment.center,
-    child: Text(
-      text,
-      style: TextStyle(
-        fontWeight: FontWeight.bold,
-        fontSize: 18.sp,
-        color: kNavy,
-      ),
-    ),
-  );
-
-  Widget _td(String text, {TextAlign align = TextAlign.center}) => Container(
-    height: 44.h,
-    padding: EdgeInsets.symmetric(vertical: 8.h, horizontal: 8.w),
-    alignment:
-        align == TextAlign.center ? Alignment.center : Alignment.centerLeft,
-    child: Text(
-      text,
-      style: TextStyle(fontSize: 15.sp, color: kNavy),
-      overflow: TextOverflow.ellipsis,
-    ),
-  );
-
   Widget _actionButton(
     String label, {
     required Color bgColor,
@@ -546,28 +521,32 @@ class _AdDashPageState extends State<AdDashPage> {
                                 child: Row(
                                   mainAxisAlignment: MainAxisAlignment.center,
                                   children: [
-                                    _PieTwoValues(
-                                      percent1: 0.2,
-                                      color1: kPink,
-                                      label1: "외국인",
-                                      percent2: 0.8,
-                                      color2: kNavy,
-                                      label2: "한국인",
-                                      size: 150,
-                                      section1Text: "20%",
-                                      section2Text: "80%",
+                                    Flexible(
+                                      child: _PieTwoValues(
+                                        percent1: 0.2,
+                                        color1: kPink,
+                                        label1: "외국인",
+                                        percent2: 0.8,
+                                        color2: kNavy,
+                                        label2: "한국인",
+                                        size: 150,
+                                        section1Text: "20%",
+                                        section2Text: "80%",
+                                      ),
                                     ),
-                                    SizedBox(width: 80.w),
-                                    _PieTwoValues(
-                                      percent1: 0.6,
-                                      color1: kNavy,
-                                      label1: "남",
-                                      percent2: 0.4,
-                                      color2: kPink,
-                                      label2: "여",
-                                      size: 150,
-                                      section1Text: "60%",
-                                      section2Text: "40%",
+                                    SizedBox(width: 20.w),
+                                    Flexible(
+                                      child: _PieTwoValues(
+                                        percent1: 0.6,
+                                        color1: kNavy,
+                                        label1: "남",
+                                        percent2: 0.4,
+                                        color2: kPink,
+                                        label2: "여",
+                                        size: 150,
+                                        section1Text: "60%",
+                                        section2Text: "40%",
+                                      ),
                                     ),
                                   ],
                                 ),

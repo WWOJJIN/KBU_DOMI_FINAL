@@ -1263,13 +1263,20 @@ def create_roommate_request():
             # 생성된 신청의 ID 가져오기
             request_id = cur.lastrowid
 
-            # 이력 테이블에 초기 기록 (트리거 대신 명시적 기록)
+            # 이력 테이블에 초기 기록 (중복 방지 체크)
             cur.execute('''
-                INSERT INTO Roommate_Request_History (
-                    request_id, requester_id, requested_id, previous_status, new_status,
-                    change_reason, changed_by, changed_by_type
-                ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
-            ''', (request_id, requester_id, requested_id, None, 'pending', '신청 생성', requester_id, 'student'))
+                SELECT COUNT(*) as count FROM Roommate_Request_History 
+                WHERE request_id = %s AND new_status = 'pending' AND change_reason = '신청 생성'
+            ''', (request_id,))
+            
+            existing_history = cur.fetchone()
+            if existing_history['count'] == 0:
+                cur.execute('''
+                    INSERT INTO Roommate_Request_History (
+                        request_id, requester_id, requested_id, previous_status, new_status,
+                        change_reason, changed_by, changed_by_type
+                    ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                ''', (request_id, requester_id, requested_id, None, 'pending', '신청 생성', requester_id, 'student'))
 
             conn.commit()
         return jsonify({'message': '룸메이트 신청이 완료되었습니다.'}), 201
@@ -1403,23 +1410,57 @@ def accept_roommate_request(request_id):
             '''
             cur.execute(query, (datetime.now(), request_id))
 
-            # 상대방 신청도 같은 pair_id로 연결하고 roommate_type을 'mutual'로 변경
-            if request_info['pair_id']:
+            # 상호 신청 처리: 피신청자가 신청자에게 역신청을 생성하거나 기존 신청을 업데이트
+            requester_id = request_info['requester_id']
+            requested_id = request_info['requested_id']
+            pair_id = request_info['pair_id']
+            
+            # 역방향 신청이 이미 있는지 확인
+            cur.execute(
+                "SELECT id FROM Roommate_Requests WHERE requester_id = %s AND requested_id = %s",
+                (requested_id, requester_id)
+            )
+            reverse_request = cur.fetchone()
+            
+            if reverse_request:
+                # 기존 역방향 신청을 'accepted'로 변경하고 같은 pair_id 설정
                 cur.execute(
                     '''
                     UPDATE Roommate_Requests
-                    SET roommate_type = 'mutual'
-                    WHERE (requester_id = %s AND requested_id = %s)
-                       OR (requester_id = %s AND requested_id = %s)
-                       AND pair_id = %s
-                ''',
-                    (request_info['requested_id'],
-                     request_info['requester_id'],
-                        request_info['requester_id'],
-                        request_info['requested_id'],
-                        request_info['pair_id']))
+                    SET status = 'accepted', roommate_type = 'mutual', pair_id = %s, confirm_date = %s
+                    WHERE id = %s
+                    ''',
+                    (pair_id, datetime.now(), reverse_request['id'])
+                )
+                
+                # 역방향 신청 이력 기록
+                cur.execute('''
+                    INSERT INTO Roommate_Request_History (
+                        request_id, requester_id, requested_id, previous_status, new_status,
+                        change_reason, changed_by, changed_by_type
+                    ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                ''', (reverse_request['id'], requested_id, requester_id, 'pending', 'accepted', '상호 수락', requested_id, 'student'))
+            else:
+                # 역방향 신청 생성
+                cur.execute(
+                    '''
+                    INSERT INTO Roommate_Requests (requester_id, requested_id, status, request_date, confirm_date, pair_id, roommate_type)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s)
+                    ''',
+                    (requested_id, requester_id, 'accepted', datetime.now(), datetime.now(), pair_id, 'mutual')
+                )
+                
+                reverse_request_id = cur.lastrowid
+                
+                # 역방향 신청 이력 기록
+                cur.execute('''
+                    INSERT INTO Roommate_Request_History (
+                        request_id, requester_id, requested_id, previous_status, new_status,
+                        change_reason, changed_by, changed_by_type
+                    ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                ''', (reverse_request_id, requested_id, requester_id, None, 'accepted', '상호 신청 생성', requested_id, 'student'))
 
-            # 이력 기록
+            # 원본 신청 이력 기록 (중복 방지)
             cur.execute('''
                 INSERT INTO Roommate_Request_History (
                     request_id, requester_id, requested_id, previous_status, new_status,
@@ -2491,16 +2532,29 @@ def verify_checkin_document(checkin_id):
     conn = get_db()
     try:
         with conn.cursor() as cur:
+            # 먼저 해당 서류가 존재하는지 확인
+            cur.execute("""
+                SELECT status FROM Checkin_Documents
+                WHERE checkin_id = %s AND file_name = %s
+            """, (checkin_id, file_name))
+            
+            existing_doc = cur.fetchone()
+            if not existing_doc:
+                return jsonify({'error': '해당 서류를 찾을 수 없습니다.'}), 404
+            
             # 서류 상태 업데이트
             new_status = '확인완료' if is_verified else '제출완료'
-            cur.execute("""
-                UPDATE Checkin_Documents
-                SET status = %s
-                WHERE checkin_id = %s AND file_name = %s
-            """, (new_status, checkin_id, file_name))
-
-            if cur.rowcount == 0:
-                return jsonify({'error': '해당 서류를 찾을 수 없습니다.'}), 404
+            current_status = existing_doc['status']
+            
+            # 이미 같은 상태라면 업데이트하지 않고 성공 응답
+            if current_status == new_status:
+                print(f"서류 {file_name}는 이미 {new_status} 상태입니다. 업데이트 스킵.")
+            else:
+                cur.execute("""
+                    UPDATE Checkin_Documents
+                    SET status = %s
+                    WHERE checkin_id = %s AND file_name = %s
+                """, (new_status, checkin_id, file_name))
 
             # 모든 서류가 확인되었는지 체크
             cur.execute("""

@@ -2017,22 +2017,56 @@ class _AdInPageState extends State<AdInPage>
               ),
               _buildTableCell(doc['name'] ?? 'N/A'),
               _buildTableCell(doc['fileName'] ?? 'N/A'),
-              // '미확인' 상태일 때만 클릭 가능하며, 클릭 시 미리보기 다이얼로그 호출
+              // 확인 상태에 따라 다른 UI 표시
               TableCell(
                 verticalAlignment: TableCellVerticalAlignment.middle,
                 child: GestureDetector(
                   onTap: () => _showDocumentPreviewDialog(studentApp, doc),
-                  child: Text(
-                    isVerified ? '확인' : '미확인',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: 12.sp,
+                  child: Container(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: 8.w,
+                      vertical: 4.h,
+                    ),
+                    decoration: BoxDecoration(
                       color:
                           isVerified
-                              ? AppColors.statusConfirmed
-                              : AppColors.statusWaiting,
-                      fontWeight: FontWeight.bold,
-                      decoration: TextDecoration.underline, // 항상 밑줄 표시
+                              ? AppColors.statusConfirmed.withOpacity(0.1)
+                              : AppColors.statusWaiting.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(12.r),
+                      border: Border.all(
+                        color:
+                            isVerified
+                                ? AppColors.statusConfirmed
+                                : AppColors.statusWaiting,
+                        width: 1,
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          isVerified ? Icons.check_circle : Icons.visibility,
+                          size: 12.sp,
+                          color:
+                              isVerified
+                                  ? AppColors.statusConfirmed
+                                  : AppColors.statusWaiting,
+                        ),
+                        SizedBox(width: 4.w),
+                        Text(
+                          isVerified ? '확인완료' : '확인',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontSize: 11.sp,
+                            color:
+                                isVerified
+                                    ? AppColors.statusConfirmed
+                                    : AppColors.statusWaiting,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ),
@@ -2185,20 +2219,50 @@ class _AdInPageState extends State<AdInPage>
                 style: TextStyle(color: AppColors.fontSecondary),
               ),
             ),
-            ElevatedButton(
-              onPressed: () async {
-                Navigator.of(dialogContext).pop();
-                await _verifyDocument(studentApp, document);
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.statusConfirmed,
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(
+            // 이미 확인된 문서인지 여부에 따라 버튼 표시 변경
+            if (document['isVerified'] == true)
+              Container(
+                padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
+                decoration: BoxDecoration(
+                  color: AppColors.statusConfirmed.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(8.r),
+                  border: Border.all(color: AppColors.statusConfirmed),
                 ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.check_circle,
+                      size: 16.sp,
+                      color: AppColors.statusConfirmed,
+                    ),
+                    SizedBox(width: 4.w),
+                    Text(
+                      '확인완료',
+                      style: TextStyle(
+                        color: AppColors.statusConfirmed,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14.sp,
+                      ),
+                    ),
+                  ],
+                ),
+              )
+            else
+              ElevatedButton(
+                onPressed: () async {
+                  Navigator.of(dialogContext).pop();
+                  await _verifyDocument(studentApp, document);
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.statusConfirmed,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8.r),
+                  ),
+                ),
+                child: const Text('확인'),
               ),
-              child: const Text('확인'),
-            ),
           ],
         );
       },
@@ -2322,9 +2386,13 @@ class _AdInPageState extends State<AdInPage>
           }
         });
 
+        // 이미 확인된 문서인지 여부에 따라 다른 메시지 표시
+        String message =
+            document['isVerified'] == true ? '이미 확인된 서류입니다.' : '서류가 확인되었습니다.';
+
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('서류가 확인되었습니다.'),
+            content: Text(message),
             backgroundColor: AppColors.statusConfirmed,
           ),
         );
