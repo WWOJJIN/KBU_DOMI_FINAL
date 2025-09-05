@@ -26,7 +26,11 @@ class AppColors {
 }
 
 class AdRoomStatusPage extends StatefulWidget {
-  const AdRoomStatusPage({super.key});
+  // 특정 학생을 선택하기 위한 파라미터 추가
+  final String? studentIdToSelect;
+  final String? initialTab;
+
+  const AdRoomStatusPage({super.key, this.studentIdToSelect, this.initialTab});
 
   @override
   State<AdRoomStatusPage> createState() => _AdRoomStatusPageState();
@@ -50,6 +54,119 @@ class _AdRoomStatusPageState extends State<AdRoomStatusPage> {
   void initState() {
     super.initState();
     _loadAndInitializeData();
+
+    // 생성자를 통해 전달받은 인자가 있을 경우 처리
+    if (widget.initialTab != null) {
+      _currentRightPanelTab = widget.initialTab!;
+    }
+    if (widget.studentIdToSelect != null) {
+      // 데이터 로드 완료 후 인자 처리
+      Future.delayed(const Duration(milliseconds: 150), () {
+        if (!mounted) return;
+        if (ApplicationDataService.applications.isEmpty) {
+          // 데이터가 아직 로드되지 않았다면 재시도
+          Future.delayed(const Duration(milliseconds: 100), () {
+            if (!mounted) return;
+            _selectStudentFromArguments(
+              widget.studentIdToSelect!,
+              widget.initialTab,
+            );
+          });
+        } else {
+          _selectStudentFromArguments(
+            widget.studentIdToSelect!,
+            widget.initialTab,
+          );
+        }
+      });
+    }
+  }
+
+  // 전달받은 학생 ID로 학생을 찾아 선택하는 함수
+  void _selectStudentFromArguments(
+    String studentIdToSelect,
+    String? initialTab,
+  ) {
+    final allApplications = ApplicationDataService.applications;
+    int indexInListItems = -1;
+
+    Map<String, dynamic>? targetApp;
+    for (var app in allApplications) {
+      if (app['studentId'] == studentIdToSelect) {
+        targetApp = app;
+        break;
+      }
+    }
+
+    if (targetApp != null) {
+      if (initialTab != null) {
+        _currentRightPanelTab = initialTab;
+      }
+
+      final List<Map<String, dynamic>> listItems =
+          _currentRightPanelTab == '룸메이트 조회'
+              ? _getOnlyRoommatePairs()
+              : _filteredApplications;
+
+      for (int i = 0; i < listItems.length; i++) {
+        final item = listItems[i];
+        if (item['isPair'] == true) {
+          if (item['student1']['studentId'] == studentIdToSelect ||
+              item['student2']['studentId'] == studentIdToSelect) {
+            indexInListItems = i;
+            break;
+          }
+        } else if (item['studentId'] == studentIdToSelect) {
+          indexInListItems = i;
+          break;
+        }
+      }
+
+      if (indexInListItems != -1) {
+        setState(() {
+          _selectedIndex = indexInListItems;
+          _updateSelection();
+        });
+      } else {
+        setState(() {
+          _selectedFilters['기숙사'] = {'전체'};
+          _searchText = '';
+          _searchController.clear();
+        });
+        Future.delayed(const Duration(milliseconds: 50), () {
+          if (!mounted) return;
+          final List<Map<String, dynamic>> refreshedListItems =
+              _currentRightPanelTab == '룸메이트 조회'
+                  ? _getOnlyRoommatePairs()
+                  : _filteredApplications;
+
+          for (int i = 0; i < refreshedListItems.length; i++) {
+            final item = refreshedListItems[i];
+            if (item['isPair'] == true) {
+              if (item['student1']['studentId'] == studentIdToSelect ||
+                  item['student2']['studentId'] == studentIdToSelect) {
+                indexInListItems = i;
+                break;
+              }
+            } else if (item['studentId'] == studentIdToSelect) {
+              indexInListItems = i;
+              break;
+            }
+          }
+
+          if (indexInListItems != -1) {
+            setState(() {
+              _selectedIndex = indexInListItems;
+              _updateSelection();
+            });
+          } else {
+            print(
+              "AdRoomStatusPage: Student $studentIdToSelect not found after refresh.",
+            );
+          }
+        });
+      }
+    }
   }
 
   void _loadAndInitializeData() async {
@@ -859,29 +976,6 @@ class _AdRoomStatusPageState extends State<AdRoomStatusPage> {
     );
   }
 
-  Widget _buildStudentInfoLine(Map<String, dynamic> student) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          student['studentName'],
-          overflow: TextOverflow.ellipsis,
-          style: TextStyle(
-            fontSize: 15.sp,
-            fontWeight: FontWeight.bold,
-            color: AppColors.fontPrimary,
-          ),
-        ),
-        SizedBox(height: 4.h),
-        Text(
-          '${student['studentId']} | ${student['gender']} | ${student['department']} | ${student['smokingStatus']}',
-          overflow: TextOverflow.ellipsis,
-          style: TextStyle(fontSize: 13.sp, color: AppColors.fontSecondary),
-        ),
-      ],
-    );
-  }
-
   Widget _buildRightPanel() {
     final listItems =
         _currentRightPanelTab == '룸메이트 조회'
@@ -1601,68 +1695,6 @@ class _AdRoomStatusPageState extends State<AdRoomStatusPage> {
             ],
           ),
       ],
-    );
-  }
-
-  // _showDocumentPreviewDialog 함수 (AdRoomStatusPage에서 필요하므로 여기에 추가)
-  Future<void> _showDocumentPreviewDialog(
-    Map<String, dynamic> studentApp,
-    Map<String, dynamic> document,
-  ) async {
-    return showDialog<void>(
-      context: context,
-      barrierDismissible: false,
-      builder: (BuildContext dialogContext) {
-        return AlertDialog(
-          backgroundColor: Colors.white,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(8.r),
-          ),
-          title: Text(
-            '${document['name']} 미리보기',
-            style: TextStyle(
-              fontWeight: FontWeight.bold,
-              fontSize: 18.sp,
-              color: AppColors.fontPrimary,
-            ),
-          ),
-          content: SizedBox(
-            width: 380.w,
-            child: SingleChildScrollView(
-              child: ListBody(
-                children: <Widget>[
-                  Text(
-                    '\'${document['fileName']}\'의 서류 내용을 여기에 표시합니다.',
-                    style: TextStyle(
-                      color: AppColors.fontSecondary,
-                      fontSize: 15.sp,
-                      height: 1.6,
-                    ),
-                  ),
-                  SizedBox(height: 16.h),
-                  Container(
-                    height: 200.h,
-                    color: AppColors.disabledBackground,
-                    alignment: Alignment.center,
-                    child: const Text('(미리보기 더미 영역)'),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          actions: <Widget>[
-            TextButton(
-              onPressed: () => Navigator.of(dialogContext).pop(),
-              child: const Text(
-                '닫기',
-                style: TextStyle(color: AppColors.fontSecondary),
-              ),
-            ),
-            // 이 다이얼로그에서 '확인' 버튼을 누르는 것은 서류 확인이 아니라 그냥 닫는 역할
-            // 실제 서류 확인 상태 변경은 AdInPage에서 이루어져야 하므로, 여기서는 관련 로직 제거
-          ],
-        );
-      },
     );
   }
 

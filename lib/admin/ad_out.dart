@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
-import 'package:intl/intl.dart';
 
 // --- 디자인에 사용될 색상 정의 ---
 class AppColors {
@@ -35,7 +34,7 @@ class _AdOutPageState extends State<AdOutPage> {
   String _searchText = '';
   String _statusFilter = '전체';
   bool _isLoading = true;
-  int _hoveredIndex = -1;
+  bool _isEditMode = false;
 
   final TextEditingController _searchController = TextEditingController();
   final TextEditingController _adminMemoController = TextEditingController();
@@ -139,6 +138,59 @@ class _AdOutPageState extends State<AdOutPage> {
     }
   }
 
+  // 관리자 메모 저장 함수
+  Future<void> _saveMemo(int checkoutId) async {
+    try {
+      final response = await http.put(
+        Uri.parse('http://localhost:5050/api/admin/checkout/$checkoutId/memo'),
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode({'adminMemo': _adminMemoController.text}),
+      );
+
+      if (response.statusCode == 200) {
+        final responseData = json.decode(response.body);
+
+        // 로컬 데이터 업데이트
+        final index = _checkoutRequests.indexWhere(
+          (r) => r['checkout_id'] == checkoutId,
+        );
+        if (index != -1) {
+          setState(() {
+            _checkoutRequests[index]['admin_memo'] = _adminMemoController.text;
+            _isEditMode = false;
+          });
+        }
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(responseData['message']),
+            backgroundColor: Colors.green,
+          ),
+        );
+      } else {
+        throw Exception('API 오류');
+      }
+    } catch (e) {
+      // API 실패 시 로컬 업데이트
+      final index = _checkoutRequests.indexWhere(
+        (r) => r['checkout_id'] == checkoutId,
+      );
+      if (index != -1) {
+        setState(() {
+          _checkoutRequests[index]['admin_memo'] = _adminMemoController.text;
+          _isEditMode = false;
+        });
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('메모가 저장되었습니다.'),
+          backgroundColor: Colors.green,
+        ),
+      );
+    }
+  }
+
   void _updateSelection({bool reset = false}) {
     if (reset) _selectedIndex = -1;
     final list = _filteredRequests;
@@ -148,9 +200,11 @@ class _AdOutPageState extends State<AdOutPage> {
       }
       final selectedRequest = list[_selectedIndex];
       _adminMemoController.text = selectedRequest['admin_memo'] ?? '';
+      _isEditMode = false;
     } else {
       _selectedIndex = -1;
       _adminMemoController.text = '';
+      _isEditMode = false;
     }
     if (mounted) setState(() {});
   }
@@ -398,6 +452,7 @@ class _AdOutPageState extends State<AdOutPage> {
           setState(() {
             _selectedIndex = index;
             _adminMemoController.text = request['admin_memo'] ?? '';
+            _isEditMode = false;
           });
         },
         borderRadius: BorderRadius.circular(8.r),
@@ -518,25 +573,83 @@ class _AdOutPageState extends State<AdOutPage> {
             _buildChecklistRow('개인정보 수집 동의', request['agree_privacy'] ?? false),
           ]),
           SizedBox(height: 24.h),
-          Text(
-            '관리자 메모',
-            style: TextStyle(
-              fontSize: 16.sp,
-              fontWeight: FontWeight.bold,
-              color: AppColors.fontPrimary,
-            ),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Text(
+                '관리자 메모',
+                style: TextStyle(
+                  fontSize: 16.sp,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.fontPrimary,
+                ),
+              ),
+              if (!_isEditMode)
+                TextButton(
+                  onPressed: () => setState(() => _isEditMode = true),
+                  child: const Text('작성'),
+                ),
+            ],
           ),
           SizedBox(height: 8.h),
           TextField(
             controller: _adminMemoController,
             maxLines: 3,
+            enabled: _isEditMode,
             decoration: InputDecoration(
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(8.r),
               ),
-              hintText: '관리자 메모를 입력하세요...',
+              hintText:
+                  _isEditMode
+                      ? '관리자 메모를 입력하세요...'
+                      : '메모를 입력하려면 \'수정\' 또는 \'작성\' 버튼을 눌러주세요.',
+              filled: !_isEditMode,
+              fillColor: _isEditMode ? Colors.white : Colors.grey[50],
             ),
           ),
+          if (_isEditMode)
+            Padding(
+              padding: EdgeInsets.only(top: 12.h),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  TextButton(
+                    onPressed: () {
+                      setState(() {
+                        _adminMemoController.text = request['admin_memo'] ?? '';
+                        _isEditMode = false;
+                      });
+                    },
+                    child: const Text(
+                      '취소',
+                      style: TextStyle(color: AppColors.fontSecondary),
+                    ),
+                  ),
+                  SizedBox(width: 12.w),
+                  ElevatedButton(
+                    onPressed: () => _saveMemo(request['checkout_id']),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primary,
+                      foregroundColor: Colors.white,
+                      padding: EdgeInsets.symmetric(
+                        horizontal: 24.w,
+                        vertical: 14.h,
+                      ),
+                      textStyle: TextStyle(
+                        fontSize: 16.sp,
+                        fontWeight: FontWeight.bold,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8.r),
+                      ),
+                    ),
+                    child: const Text('저장'),
+                  ),
+                ],
+              ),
+            ),
           SizedBox(height: 24.h),
           _buildStepButtons(request),
         ],

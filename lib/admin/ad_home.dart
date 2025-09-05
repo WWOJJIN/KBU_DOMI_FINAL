@@ -1,14 +1,11 @@
 import 'package:flutter/material.dart';
-import 'search.dart'; // 학생조회
 import 'ad_overnight.dart'; // 외박관리
 import 'ad_as.dart'; // AS신청관리
 import 'ad_dinner.dart'; // 석식관리
 import 'score.dart'; // 상벌점조회
-import 'scorecheck.dart'; // 상벌점 관리
 import 'ad_out.dart'; // 퇴소관리
 import 'ad_dash.dart';
 import 'ad_vacation.dart'; // 방학 이용관리
-import 'ad_roommate.dart'; // 룸메이트 관리
 import 'ad_room_status.dart'; // ✅ 새로 추가된 호실 전체 현황 페이지 import
 import 'ad_application.dart'; // 입주 신청 관리 추가
 import 'ad_in.dart'; // 입실관리
@@ -85,12 +82,19 @@ class _AdHomePageState extends State<AdHomePage> {
   ];
 
   Map<String, dynamic>? _adInPageArguments;
+  Map<String, dynamic>? _adRoomStatusPageArguments;
 
   // 외부에서 메뉴를 변경하고 필요한 인자를 전달받을 수 있는 Public 메서드
   void selectMenuByIndex(int index, {Map<String, dynamic>? arguments}) {
     setState(() {
       _selectedMenu = index;
-      _adInPageArguments = arguments;
+      if (index == 1) {
+        // 학생 관리 페이지
+        _adRoomStatusPageArguments = arguments;
+      } else if (index == 3) {
+        // 입실관리 페이지
+        _adInPageArguments = arguments;
+      }
     });
   }
 
@@ -109,7 +113,11 @@ class _AdHomePageState extends State<AdHomePage> {
           },
         );
       case 1: // 학생 관리
-        return AdRoomStatusPage();
+        return AdRoomStatusPage(
+          key: ValueKey(_adRoomStatusPageArguments),
+          studentIdToSelect: _adRoomStatusPageArguments?['studentId'],
+          initialTab: _adRoomStatusPageArguments?['initialTab'],
+        );
       case 2: // 입주 신청 관리
         return AdApplicationPage();
       case 3: // 입실관리

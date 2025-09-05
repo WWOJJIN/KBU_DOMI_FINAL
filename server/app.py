@@ -2677,12 +2677,12 @@ def admin_update_checkout_status(checkout_id):
                     'error': f'현재 상태({current_status})에서 {new_status}로 변경할 수 없습니다.'
                 }), 400
 
-            # 상태 업데이트
+            # 상태 및 관리자 메모 업데이트
             cur.execute("""
                 UPDATE Checkout
-                SET status = %s, upd_dt = %s
+                SET status = %s, admin_memo = %s, upd_dt = %s
                 WHERE checkout_id = %s
-            """, (new_status, datetime.now(), checkout_id))
+            """, (new_status, admin_memo, datetime.now(), checkout_id))
 
             # 퇴소 승인 시 학생의 거주 상태를 '퇴소'로 변경
             if new_status == '승인':
@@ -2714,6 +2714,38 @@ def admin_update_checkout_status(checkout_id):
 
         return jsonify({'message': status_messages.get(
             new_status, f'상태가 {new_status}로 변경되었습니다.'), 'new_status': new_status})
+    except Exception as e:
+        conn.rollback()
+        return jsonify({'error': str(e)}), 500
+    finally:
+        conn.close()
+
+# 퇴소 신청 관리자 메모 저장 API
+@app.route('/api/admin/checkout/<int:checkout_id>/memo', methods=['PUT'])
+def update_checkout_memo(checkout_id):
+    """관리자 메모만 업데이트"""
+    data = request.json
+    admin_memo = data.get('adminMemo', '')
+
+    conn = get_db()
+    try:
+        with conn.cursor() as cur:
+            # 퇴소 신청 존재 여부 확인
+            cur.execute(
+                "SELECT checkout_id FROM Checkout WHERE checkout_id = %s", (checkout_id,))
+            if not cur.fetchone():
+                return jsonify({'error': '해당 퇴소 신청을 찾을 수 없습니다.'}), 404
+
+            # 관리자 메모 업데이트
+            cur.execute("""
+                UPDATE Checkout
+                SET admin_memo = %s, upd_dt = %s
+                WHERE checkout_id = %s
+            """, (admin_memo, datetime.now(), checkout_id))
+
+            conn.commit()
+
+        return jsonify({'message': '관리자 메모가 저장되었습니다.', 'admin_memo': admin_memo})
     except Exception as e:
         conn.rollback()
         return jsonify({'error': str(e)}), 500

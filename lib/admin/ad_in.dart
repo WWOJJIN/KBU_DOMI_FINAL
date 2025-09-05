@@ -7,6 +7,7 @@ import 'dart:math' as math;
 import 'application_data_service.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'ad_home.dart'; // adHomePageKey 사용을 위해 import 추가
 
 // --- AppColors 클래스 (변경 없음) ---
 class AppColors {
@@ -2537,13 +2538,31 @@ class _AdInPageState extends State<AdInPage>
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(8.r),
           ),
-          title: Text(
-            '${room['building']} ${room['roomNumber']} 배정 현황',
-            style: TextStyle(
-              fontWeight: FontWeight.bold,
-              fontSize: 20.sp,
-              color: AppColors.fontPrimary,
-            ),
+          title: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                '${room['building']} ${room['roomNumber']} 배정 현황',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 20.sp,
+                  color: AppColors.fontPrimary,
+                ),
+              ),
+              if (occupants.isNotEmpty)
+                Padding(
+                  padding: EdgeInsets.only(top: 4.h),
+                  child: Text(
+                    '학생 카드를 클릭하면 학생관리에서 상세 정보를 확인할 수 있습니다.',
+                    style: TextStyle(
+                      fontSize: 12.sp,
+                      color: AppColors.fontSecondary,
+                      fontWeight: FontWeight.normal,
+                    ),
+                  ),
+                ),
+            ],
           ),
           content: SizedBox(
             width: 380.w,
@@ -2566,51 +2585,88 @@ class _AdInPageState extends State<AdInPage>
                       itemCount: occupants.length,
                       itemBuilder: (context, index) {
                         final student = occupants[index];
-                        return Container(
-                          margin: EdgeInsets.only(bottom: 8.h),
-                          padding: EdgeInsets.all(12.w),
-                          decoration: BoxDecoration(
-                            border: Border.all(color: AppColors.border),
-                            borderRadius: BorderRadius.circular(8.r),
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                '${student['studentName']} (${student['studentId']})',
-                                style: TextStyle(
-                                  fontSize: 16.sp,
-                                  fontWeight: FontWeight.bold,
-                                  color: AppColors.fontPrimary,
-                                ),
-                              ),
-                              SizedBox(height: 4.h),
-                              Text.rich(
-                                TextSpan(
-                                  style: TextStyle(
-                                    fontSize: 14.sp,
-                                    color: AppColors.fontSecondary,
-                                  ),
-                                  children: [
-                                    TextSpan(
-                                      text: student['gender'],
-                                      style: TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                        color:
-                                            student['gender'] == '남'
-                                                ? AppColors.primary
-                                                : AppColors.genderFemale,
+                        return InkWell(
+                          onTap: () {
+                            // 팝업창 닫기
+                            Navigator.of(dialogContext).pop();
+
+                            // 학생관리 페이지로 이동
+                            final int adRoomStatusPageIndex = adHomePageKey
+                                .currentState!
+                                .getMenuIndexByTitle('학생 관리');
+                            adHomePageKey.currentState?.selectMenuByIndex(
+                              adRoomStatusPageIndex,
+                              arguments: {
+                                'studentId': student['studentId'],
+                                'initialTab': '학생 조회',
+                              },
+                            );
+                          },
+                          borderRadius: BorderRadius.circular(8.r),
+                          child: Container(
+                            margin: EdgeInsets.only(bottom: 8.h),
+                            padding: EdgeInsets.all(12.w),
+                            decoration: BoxDecoration(
+                              border: Border.all(color: AppColors.border),
+                              borderRadius: BorderRadius.circular(8.r),
+                              // 호버 효과를 위한 색상 추가
+                              color: Colors.white,
+                            ),
+                            child: Row(
+                              children: [
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        '${student['studentName']} (${student['studentId']})',
+                                        style: TextStyle(
+                                          fontSize: 16.sp,
+                                          fontWeight: FontWeight.bold,
+                                          color: AppColors.fontPrimary,
+                                        ),
                                       ),
-                                    ),
-                                    TextSpan(
-                                      text:
-                                          ' | ${student['department']} | ${student['roomType']} | ${student['smokingStatus']}',
-                                    ),
-                                  ],
+                                      SizedBox(height: 4.h),
+                                      Text.rich(
+                                        TextSpan(
+                                          style: TextStyle(
+                                            fontSize: 14.sp,
+                                            color: AppColors.fontSecondary,
+                                          ),
+                                          children: [
+                                            TextSpan(
+                                              text: student['gender'],
+                                              style: TextStyle(
+                                                fontWeight: FontWeight.bold,
+                                                color:
+                                                    student['gender'] == '남'
+                                                        ? AppColors.primary
+                                                        : AppColors
+                                                            .genderFemale,
+                                              ),
+                                            ),
+                                            TextSpan(
+                                              text:
+                                                  ' | ${student['department']} | ${student['roomType']} | ${student['smokingStatus']}',
+                                            ),
+                                          ],
+                                        ),
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ],
+                                  ),
                                 ),
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ],
+                                // 클릭 가능함을 나타내는 아이콘 추가
+                                Icon(
+                                  Icons.arrow_forward_ios,
+                                  size: 16.sp,
+                                  color: AppColors.fontSecondary.withOpacity(
+                                    0.7,
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
                         );
                       },

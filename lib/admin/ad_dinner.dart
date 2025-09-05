@@ -6,7 +6,6 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:intl/intl.dart'; // [오류 수정] 올바른 경로로 변경
 import 'package:http/http.dart' as http;
 import 'dart:convert';
-import 'dart:math';
 import 'package:syncfusion_flutter_core/theme.dart';
 import 'package:syncfusion_flutter_datagrid/datagrid.dart';
 import 'package:dropdown_button2/dropdown_button2.dart';
@@ -63,8 +62,6 @@ class _AdDinnerPageState extends State<AdDinnerPage> {
   Map<int, int> _monthlyCounts = {};
   Map<String, dynamic>? _periodInfo;
   Map<String, dynamic>? _notice;
-
-  bool _isChartFormat = false;
 
   static const List<String> _statusList = ['전체', '결제완료', '환불완료'];
 
@@ -187,230 +184,8 @@ class _AdDinnerPageState extends State<AdDinnerPage> {
       _dinnerDataSource = DinnerDataSource(
         context: context,
         requests: _filteredRequests,
-        onEdit: _showPaymentDialog,
       );
     });
-  }
-
-  Future<void> _processPaymentWithDetails(
-    int dinnerId,
-    String action,
-    int amount,
-    DateTime? manualDate,
-    String note,
-  ) async {
-    try {
-      final response = await http.put(
-        Uri.parse('http://localhost:5050/api/admin/dinner/$dinnerId/status'),
-        headers: {'Content-Type': 'application/json'},
-        body: json.encode({
-          'action': action,
-          'amount': amount,
-          'manual_date': manualDate?.toIso8601String(),
-          'note': note,
-        }),
-      );
-      if (response.statusCode == 200) {
-        await _loadDinnerRequests();
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('${action == 'payment' ? '결제' : '환불'} 처리가 완료되었습니다.'),
-            backgroundColor: AppColors.statusSuccess,
-          ),
-        );
-      } else {
-        throw Exception('결제/환불 처리 실패: ${response.body}');
-      }
-    } catch (e) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('처리 중 오류가 발생했습니다: $e')));
-    }
-  }
-
-  void _showPaymentDialog(AdminDinnerRequest request) {
-    String action = 'payment';
-    final amountController = TextEditingController(
-      text: NumberFormat('#,###').format(150000),
-    );
-    DateTime? manualDate;
-    final noteController = TextEditingController();
-    showDialog(
-      context: context,
-      builder:
-          (context) => StatefulBuilder(
-            builder: (context, setStateInDialog) {
-              return AlertDialog(
-                backgroundColor: AppColors.cardBackground,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8.r),
-                ),
-                title: Text(
-                  '결제/환불 처리',
-                  style: headingStyle(
-                    18,
-                    FontWeight.bold,
-                    AppColors.fontPrimary,
-                  ),
-                ),
-                content: SizedBox(
-                  width: 450.w,
-                  child: SingleChildScrollView(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Container(
-                          width: double.infinity,
-                          padding: EdgeInsets.all(16.w),
-                          decoration: BoxDecoration(
-                            color: AppColors.disabledBackground,
-                            borderRadius: BorderRadius.circular(8.r),
-                          ),
-                          child: Column(
-                            children: [
-                              Text(
-                                request.studentName,
-                                style: TextStyle(
-                                  fontSize: 16.sp,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              SizedBox(height: 4.h),
-                              Text(
-                                '${request.studentId} / ${request.building ?? '-'} ${request.roomNumber ?? '-'}',
-                                style: TextStyle(
-                                  fontSize: 13.sp,
-                                  color: AppColors.fontSecondary,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        SizedBox(height: 16.h),
-                        DropdownButtonFormField2<String>(
-                          value: action,
-                          decoration: InputDecoration(
-                            labelText: '처리 구분',
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(8.r),
-                            ),
-                          ),
-                          dropdownStyleData: DropdownStyleData(
-                            decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(8.r),
-                              color: AppColors.cardBackground,
-                            ),
-                          ),
-                          items: const [
-                            DropdownMenuItem(
-                              value: 'payment',
-                              child: Text('결제 처리'),
-                            ),
-                            DropdownMenuItem(
-                              value: 'refund',
-                              child: Text('환불 처리'),
-                            ),
-                          ],
-                          onChanged:
-                              (value) =>
-                                  setStateInDialog(() => action = value!),
-                        ),
-                        SizedBox(height: 16.h),
-                        TextField(
-                          controller: amountController,
-                          decoration: InputDecoration(
-                            labelText: '금액',
-                            prefixText: '₩ ',
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(8.r),
-                            ),
-                          ),
-                          keyboardType: TextInputType.number,
-                        ),
-                        SizedBox(height: 16.h),
-                        TextField(
-                          readOnly: true,
-                          decoration: InputDecoration(
-                            labelText: '처리일 설정 (선택)',
-                            hintText:
-                                manualDate == null
-                                    ? '자동 (현재 시간)'
-                                    : DateFormat(
-                                      'yyyy-MM-dd',
-                                    ).format(manualDate!),
-                            suffixIcon: const Icon(Icons.calendar_today),
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(8.r),
-                            ),
-                          ),
-                          onTap: () async {
-                            final date = await showDatePicker(
-                              context: context,
-                              initialDate: DateTime.now(),
-                              firstDate: DateTime(2020),
-                              lastDate: DateTime(2030),
-                            );
-                            if (date != null)
-                              setStateInDialog(() => manualDate = date);
-                          },
-                        ),
-                        SizedBox(height: 16.h),
-                        TextField(
-                          controller: noteController,
-                          decoration: InputDecoration(
-                            labelText: '메모 (선택사항)',
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(8.r),
-                            ),
-                          ),
-                          maxLines: 3,
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-                actions: [
-                  TextButton(
-                    onPressed: () => Navigator.pop(context),
-                    child: const Text(
-                      '취소',
-                      style: TextStyle(color: AppColors.fontSecondary),
-                    ),
-                  ),
-                  ElevatedButton(
-                    onPressed: () {
-                      final amount =
-                          int.tryParse(
-                            amountController.text.replaceAll(',', ''),
-                          ) ??
-                          0;
-                      Navigator.pop(context);
-                      _processPaymentWithDetails(
-                        request.dinnerId,
-                        action,
-                        amount,
-                        manualDate,
-                        noteController.text,
-                      );
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor:
-                          action == 'payment'
-                              ? AppColors.statusSuccess
-                              : AppColors.statusError,
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8.r),
-                      ),
-                    ),
-                    child: Text(action == 'payment' ? '결제' : '환불'),
-                  ),
-                ],
-              );
-            },
-          ),
-    );
   }
 
   void _showNoticeDialog() {
@@ -773,33 +548,12 @@ class _AdDinnerPageState extends State<AdDinnerPage> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(
-              '월별 신청 현황',
-              style: headingStyle(16, FontWeight.bold, AppColors.fontPrimary),
-            ),
-            IconButton(
-              onPressed: () => setState(() => _isChartFormat = !_isChartFormat),
-              icon: Icon(
-                _isChartFormat
-                    ? Icons.grid_view_outlined
-                    : Icons.bar_chart_outlined,
-                color: AppColors.fontSecondary,
-              ),
-              tooltip: '보기 형식 변경',
-            ),
-          ],
+        Text(
+          '월별 신청 현황',
+          style: headingStyle(16, FontWeight.bold, AppColors.fontPrimary),
         ),
         SizedBox(height: 16.h),
-        AnimatedSwitcher(
-          duration: const Duration(milliseconds: 300),
-          transitionBuilder:
-              (child, animation) =>
-                  FadeTransition(opacity: animation, child: child),
-          child: _isChartFormat ? _buildBarChart() : _buildCardView(),
-        ),
+        _buildCardView(),
       ],
     );
   }
@@ -927,85 +681,6 @@ class _AdDinnerPageState extends State<AdDinnerPage> {
     );
   }
 
-  Widget _buildBarChart() {
-    final semesterMonths = _getSemesterMonths();
-    final dataMonths = _monthlyCounts.keys.toSet();
-    final allMonths = {...semesterMonths, ...dataMonths}.toList()..sort();
-    final double chartHeight = 150.h;
-    final int maxCount =
-        (_monthlyCounts.values.isEmpty ? 0 : _monthlyCounts.values.reduce(max));
-    return Container(
-      key: const ValueKey('chartView'),
-      height: chartHeight + 40.h,
-      padding: EdgeInsets.all(16.w),
-      decoration: BoxDecoration(
-        color: AppColors.cardBackground,
-        border: Border.all(color: AppColors.border),
-        borderRadius: BorderRadius.circular(8.r),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceAround,
-        crossAxisAlignment: CrossAxisAlignment.end,
-        children:
-            allMonths.map((month) {
-              final count = _monthlyCounts[month] ?? 0;
-              final barHeight =
-                  maxCount == 0 ? 0.0 : (count / maxCount) * chartHeight;
-              return _buildChartBar(month, count, barHeight, chartHeight);
-            }).toList(),
-      ),
-    );
-  }
-
-  Widget _buildChartBar(
-    int month,
-    int count,
-    double barHeight,
-    double chartHeight,
-  ) {
-    final monthNames = {
-      1: '1',
-      2: '2',
-      3: '3',
-      4: '4',
-      5: '5',
-      6: '6',
-      7: '7',
-      8: '8',
-      9: '9',
-      10: '10',
-      11: '11',
-      12: '12',
-    };
-    return Column(
-      mainAxisAlignment: MainAxisAlignment.end,
-      children: [
-        Text(
-          '$count',
-          style: TextStyle(
-            fontSize: 12.sp,
-            color: AppColors.fontSecondary,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        SizedBox(height: 4.h),
-        Container(
-          width: 20.w,
-          height: barHeight,
-          decoration: BoxDecoration(
-            color: AppColors.primary,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(4.r)),
-          ),
-        ),
-        SizedBox(height: 4.h),
-        Text(
-          '${monthNames[month]}월',
-          style: TextStyle(fontSize: 13.sp, color: AppColors.fontPrimary),
-        ),
-      ],
-    );
-  }
-
   Widget _buildNoticeSection() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1064,15 +739,7 @@ class _AdDinnerPageState extends State<AdDinnerPage> {
         headerRowHeight: 48.h,
         gridLinesVisibility: GridLinesVisibility.horizontal,
         headerGridLinesVisibility: GridLinesVisibility.horizontal,
-        allowSorting: false,
-        onCellTap: (details) {
-          if (details.rowColumnIndex.rowIndex > 0) {
-            int dataGridRowIndex = details.rowColumnIndex.rowIndex - 1;
-            var request =
-                _dinnerDataSource!.rows[dataGridRowIndex].getCells()[0].value;
-            _showPaymentDialog(request);
-          }
-        },
+        allowSorting: true,
       ),
     );
   }
@@ -1127,10 +794,6 @@ class _AdDinnerPageState extends State<AdDinnerPage> {
         columnName: 'processedDate',
         label: _buildHeaderCell('처리일자', headerStyle),
         allowSorting: true,
-      ),
-      GridColumn(
-        columnName: 'actions',
-        label: _buildHeaderCell('관리', headerStyle),
       ),
     ];
   }
@@ -1369,7 +1032,6 @@ class DinnerDataSource extends DataGridSource {
   DinnerDataSource({
     required this.context,
     required List<AdminDinnerRequest> requests,
-    required this.onEdit,
   }) {
     _requests =
         requests
@@ -1388,7 +1050,6 @@ class DinnerDataSource extends DataGridSource {
 
   final BuildContext context;
   late List<DataGridRow> _requests;
-  final Function(AdminDinnerRequest) onEdit;
 
   @override
   List<DataGridRow> get rows => _requests;
@@ -1452,15 +1113,6 @@ class DinnerDataSource extends DataGridSource {
           request.processedDate != null
               ? DateFormat('yy-MM-dd').format(request.processedDate!)
               : '-',
-        ),
-        Container(
-          alignment: Alignment.center,
-          padding: EdgeInsets.symmetric(horizontal: 16.w),
-          child: IconButton(
-            icon: Icon(Icons.edit, size: 18.sp, color: AppColors.fontSecondary),
-            onPressed: () => onEdit(request),
-            tooltip: '결제/환불 처리',
-          ),
         ),
       ],
     );
