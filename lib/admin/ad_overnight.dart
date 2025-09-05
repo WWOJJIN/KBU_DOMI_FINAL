@@ -625,7 +625,7 @@ class _AdOvernightPageState extends State<AdOvernightPage> {
                   Navigator.pop(context);
                   _showStatusUpdateDialog(request);
                 },
-                child: Text('상태 변경', style: TextStyle(fontSize: 14.sp)),
+                child: Text('상태 변경', style: TextStyle(fontSize: 12.sp)),
               ),
             ],
           ),
@@ -906,7 +906,7 @@ class _AdOvernightPageState extends State<AdOvernightPage> {
           ),
           SizedBox(width: 8.w),
           SizedBox(
-            width: 150.w,
+            width: 155.w,
             child: DropdownButtonFormField2<String>(
               isExpanded: true,
               decoration: InputDecoration(

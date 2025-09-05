@@ -426,7 +426,7 @@ class _RoommatePageState extends State<RoommatePage> {
   }) {
     final List<String> headers =
         isMyRequest
-            ? ['상태', '순번', '학번', '성명', '신청일자', '작업']
+            ? ['상태', '순번', '학번', '성명', '신청일자', '신청취소']
             : ['상태', '순번', '학번', '성명', '신청일자', '동의', '동의취소'];
 
     return Container(
