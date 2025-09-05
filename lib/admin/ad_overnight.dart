@@ -953,7 +953,7 @@ class _AdOvernightPageState extends State<AdOvernightPage> {
           ),
           SizedBox(width: 8.w),
           SizedBox(
-            width: 15.w,
+            width: 155.w,
             child: DropdownButtonFormField2<String>(
               isExpanded: true,
               decoration: InputDecoration(
