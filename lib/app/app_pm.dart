@@ -38,7 +38,7 @@ class _AppPmState extends State<AppPm> {
   late int _currentAcademicYear;
   late int _currentSemester;
   final DateFormat _dateFormatter = DateFormat('yyyy.MM.dd');
-  final DateTime _now = DateTime(2025, 6, 22);
+  final DateTime _now = DateTime.now();
 
   @override
   void initState() {
@@ -49,15 +49,24 @@ class _AppPmState extends State<AppPm> {
   }
 
   void _initializeSemester() {
+    print('🗓️ 현재 날짜: ${_now.toString()}');
+    print('🗓️ 현재 월: ${_now.month}');
+
     _currentAcademicYear = _now.year;
     if (_now.month >= 3 && _now.month <= 8) {
       _currentSemester = 1;
+      print('🗓️ 1학기로 설정');
     } else {
       _currentSemester = 2;
       if (_now.month < 3) {
         _currentAcademicYear = _now.year - 1;
+        print('🗓️ 1-2월이므로 전년도 2학기로 설정');
+      } else {
+        print('🗓️ 9-12월이므로 해당년도 2학기로 설정');
       }
     }
+
+    print('🗓️ 최종 학기: $_currentAcademicYear-$_currentSemester학기');
   }
 
   // 실제 상벌점 내역 불러오기

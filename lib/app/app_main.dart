@@ -285,14 +285,14 @@ class CustomNotificationDialog extends StatelessWidget {
                       return Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          // 아이콘
+                          // 아이콘 - 더 작게
                           CircleAvatar(
-                            radius: 20.r,
+                            radius: 12.r, // 더 작게
                             backgroundColor: item.color.withOpacity(0.1),
                             child: Icon(
                               item.icon,
                               color: item.color,
-                              size: 22.sp,
+                              size: 14.sp, // 더 작게
                             ),
                           ),
                           SizedBox(width: 16.w),
@@ -310,7 +310,7 @@ class CustomNotificationDialog extends StatelessWidget {
                                   overflow: TextOverflow.ellipsis,
                                   style: TextStyle(
                                     color: const Color(0xFF34495E),
-                                    fontSize: 15.sp,
+                                    fontSize: 12.sp, // 더 작게
                                     fontWeight: FontWeight.w600,
                                     height: 1.1,
                                   ),
@@ -324,7 +324,7 @@ class CustomNotificationDialog extends StatelessWidget {
                                     softWrap: false,
                                     overflow: TextOverflow.ellipsis,
                                     style: TextStyle(
-                                      fontSize: 13.sp,
+                                      fontSize: 10.sp, // 더 작게
                                       color: const Color(0xFF5D6D7E),
                                     ),
                                   ),
@@ -337,22 +337,22 @@ class CustomNotificationDialog extends StatelessWidget {
                                   overflow: TextOverflow.ellipsis,
                                   style: TextStyle(
                                     color: const Color(0xFF7F8C8D),
-                                    fontSize: 12.sp,
+                                    fontSize: 9.sp, // 더 작게
                                   ),
                                 ),
                               ],
                             ),
                           ),
 
-                          // X 버튼
+                          // X 버튼 - 더 작게
                           IconButton(
                             icon: Icon(
                               Icons.close,
-                              size: 20.sp,
+                              size: 16.sp, // 더 작게
                               color: const Color(0xFFB0B8C1),
                             ),
                             tooltip: "삭제",
-                            splashRadius: 16.r,
+                            splashRadius: 12.r, // 더 작게
                             onPressed: () => onDelete(index),
                           ),
                         ],
@@ -703,13 +703,22 @@ class _HomeShellState extends State<HomeShell> {
       context: context,
       barrierDismissible: true,
       builder:
-          (context) => CustomNotificationDialog(
-            notifications: _notifications,
-            onDelete: (idx) {
-              Navigator.of(context).pop();
-              setState(() {
-                _notifications.removeAt(idx);
-              });
+          (context) => StatefulBuilder(
+            builder: (context, setDialogState) {
+              return CustomNotificationDialog(
+                notifications: _notifications,
+                onDelete: (idx) {
+                  setDialogState(() {
+                    _notifications.removeAt(idx);
+                  });
+                  // 상위 위젯도 업데이트
+                  setState(() {});
+                  // 모든 알림이 삭제되면 다이얼로그 닫기
+                  if (_notifications.isEmpty) {
+                    Navigator.of(context).pop();
+                  }
+                },
+              );
             },
           ),
     ).then((_) {

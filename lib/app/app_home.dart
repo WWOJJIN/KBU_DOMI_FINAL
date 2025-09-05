@@ -340,87 +340,83 @@ class _AppHomeState extends State<AppHome> with WidgetsBindingObserver {
 
   /// ✅ 알림 팝업
   void _showNotificationsDialog() {
-    final media = MediaQuery.of(context);
     showDialog(
       context: context,
       builder:
-          (context) => MediaQuery(
-            data: media.copyWith(textScaler: const TextScaler.linear(1.0)),
-            child: Dialog(
-              backgroundColor: Colors.white,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(20.r),
-              ),
-              child: Padding(
-                padding: EdgeInsets.symmetric(vertical: 20.h, horizontal: 18.w),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Padding(
-                      padding: EdgeInsets.only(left: 2.w, bottom: 10.h),
-                      child: Text(
-                        '알림',
-                        style: TextStyle(
-                          fontWeight: FontWeight.w700,
-                          fontSize: 20.sp,
-                          color: const Color(0xFF34495E),
-                        ),
+          (context) => Dialog(
+            backgroundColor: Colors.white,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20.r),
+            ),
+            child: Padding(
+              padding: EdgeInsets.symmetric(vertical: 20.h, horizontal: 18.w),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Padding(
+                    padding: EdgeInsets.only(left: 2.w, bottom: 10.h),
+                    child: Text(
+                      '알림',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w700,
+                        fontSize: 20.sp,
+                        color: const Color(0xFF34495E),
                       ),
                     ),
-                    Flexible(
-                      child: ListView.separated(
-                        shrinkWrap: true,
-                        itemCount: 2,
-                        separatorBuilder:
-                            (_, __) => Divider(
-                              height: 14.h,
-                              color: const Color(0xFFF0F2F5),
-                            ),
-                        itemBuilder: (context, index) {
-                          if (index == 0) {
-                            return _oneLineNotificationItem(
-                              icon: Icons.check_circle,
-                              color: AppColors.success,
-                              title: '외박 신청이 승인되었습니다.',
-                              subtitle: '집 - 졸려요...',
-                              timestamp: '오늘',
-                              onDelete: () {},
-                            );
-                          } else {
-                            return _oneLineNotificationItem(
-                              icon: Icons.cancel,
-                              color: AppColors.danger,
-                              title: '외박 신청이 반려되었습니다.',
-                              subtitle: '집 - 너무 피곤해요...',
-                              timestamp: '오늘',
-                              onDelete: () {},
-                            );
-                          }
-                        },
+                  ),
+                  Flexible(
+                    child: ListView.separated(
+                      shrinkWrap: true,
+                      itemCount: 2,
+                      separatorBuilder:
+                          (_, __) => Divider(
+                            height: 14.h,
+                            color: const Color(0xFFF0F2F5),
+                          ),
+                      itemBuilder: (context, index) {
+                        if (index == 0) {
+                          return _oneLineNotificationItem(
+                            icon: Icons.check_circle,
+                            color: AppColors.success,
+                            title: '외박 신청이 승인되었습니다.',
+                            subtitle: '집 - 졸려요...',
+                            timestamp: '오늘',
+                            onDelete: () {},
+                          );
+                        } else {
+                          return _oneLineNotificationItem(
+                            icon: Icons.cancel,
+                            color: AppColors.danger,
+                            title: '외박 신청이 반려되었습니다.',
+                            subtitle: '집 - 너무 피곤해요...',
+                            timestamp: '오늘',
+                            onDelete: () {},
+                          );
+                        }
+                      },
+                    ),
+                  ),
+                  SizedBox(height: 16.h),
+                  ElevatedButton(
+                    onPressed: () => Navigator.of(context).pop(),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF4A69E2),
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14.r),
+                      ),
+                      padding: EdgeInsets.symmetric(vertical: 12.h),
+                    ),
+                    child: Text(
+                      '닫기',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w700,
+                        fontSize: 16.sp,
                       ),
                     ),
-                    SizedBox(height: 16.h),
-                    ElevatedButton(
-                      onPressed: () => Navigator.of(context).pop(),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF4A69E2),
-                        foregroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(14.r),
-                        ),
-                        padding: EdgeInsets.symmetric(vertical: 12.h),
-                      ),
-                      child: Text(
-                        '닫기',
-                        style: TextStyle(
-                          fontWeight: FontWeight.w700,
-                          fontSize: 16.sp,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
+                  ),
+                ],
               ),
             ),
           ),
@@ -440,43 +436,34 @@ class _AppHomeState extends State<AppHome> with WidgetsBindingObserver {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // ▶ 왼쪽 상태 아이콘: 초소형
+        // ▶ 왼쪽 상태 아이콘: 훨씬 더 작게
         Container(
-          width: 14.w, // 정말 작게
-          height: 14.w, // 정말 작게
+          width: 10.w, // 훨씬 더 작게
+          height: 10.w, // 훨씬 더 작게
           decoration: BoxDecoration(
             shape: BoxShape.circle,
             color: color.withOpacity(0.12),
           ),
           alignment: Alignment.center,
-          child: Icon(icon, color: color, size: 10.sp), // 진짜 작게
+          child: Icon(icon, color: color, size: 6.sp), // 훨씬 더 작게
         ),
-        SizedBox(width: 6.w),
+        SizedBox(width: 8.w),
 
         // ▶ 텍스트 영역
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // 제목: 한 줄 유지 + 남은 폭에 맞춰 자동 축소 (… 안 뜸)
-              Row(
-                children: [
-                  Expanded(
-                    child: FittedBox(
-                      fit: BoxFit.scaleDown,
-                      alignment: Alignment.centerLeft,
-                      child: Text(
-                        title, // 예: '외박 신청이 승인되었습니다.'
-                        softWrap: false, // 한 줄 고정
-                        style: TextStyle(
-                          color: AppColors.textPrimary,
-                          fontWeight: FontWeight.w600,
-                          fontSize: 15.sp,
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
+              // 제목: 한 줄 유지, 넘치면 말줄임표
+              Text(
+                title, // 예: '외박 신청이 승인되었습니다.'
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: AppColors.textPrimary,
+                  fontWeight: FontWeight.w600,
+                  fontSize: 11.sp, // 훨씬 더 작게
+                ),
               ),
               SizedBox(height: 3.h),
 
@@ -487,34 +474,32 @@ class _AppHomeState extends State<AppHome> with WidgetsBindingObserver {
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
                   color: AppColors.textSecondary,
-                  fontSize: 13.sp,
+                  fontSize: 9.sp, // 훨씬 더 작게
                 ),
               ),
-              SizedBox(height: 4.h),
-
+              SizedBox(height: 3.h), // 간격도 줄임
               // 시간
               Text(
                 timestamp,
                 style: TextStyle(
                   color: AppColors.textSecondary.withOpacity(0.8),
-                  fontSize: 11.sp,
+                  fontSize: 8.sp, // 훨씬 더 작게
                 ),
               ),
             ],
           ),
         ),
 
-        // ▶ 닫기(X) 버튼: 초소형 (IconButton 대신 InkWell로 최소 크기 제약 제거)
+        // ▶ 닫기(X) 버튼: 클릭하기 쉽게 조금 키움
         if (onDelete != null)
           InkWell(
             onTap: onDelete,
-            borderRadius: BorderRadius.circular(4.r),
-            child: SizedBox(
-              width: 8.w, // 정말 작게
-              height: 8.w, // 정말 작게
+            borderRadius: BorderRadius.circular(6.r),
+            child: Padding(
+              padding: EdgeInsets.all(2.w), // 클릭 영역 확보
               child: Icon(
                 Icons.close,
-                size: 12.sp, // 진짜 작게
+                size: 14.sp, // 클릭하기 쉽게 조금 키움
                 color: const Color(0xFFB0B8C1),
               ),
             ),
@@ -696,14 +681,6 @@ class _AppHomeState extends State<AppHome> with WidgetsBindingObserver {
                             onTap: () => _onStatusCardTap(4),
                           ),
                         ],
-                      ),
-                      SizedBox(height: 24.h),
-                      Center(
-                        child: OutlinedButton.icon(
-                          onPressed: _showNotificationsDialog,
-                          icon: const Icon(Icons.notifications_outlined),
-                          label: const Text('알림 보기'),
-                        ),
                       ),
                     ],
                   ),
