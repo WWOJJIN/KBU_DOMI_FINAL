@@ -71,7 +71,9 @@ class _AppPmState extends State<AppPm> {
 
     if (studentId == null) {
       print('❌ 학생 ID가 없습니다. 로그인 페이지로 이동합니다.');
-      Navigator.pushReplacementNamed(context, '/login');
+      if (mounted) {
+        Navigator.pushReplacementNamed(context, '/login');
+      }
       return;
     }
 
@@ -101,10 +103,8 @@ class _AppPmState extends State<AppPm> {
         if (data is Map<String, dynamic> &&
             data.containsKey('success') &&
             data['success'] == true) {
-          // 새로운 API 형식: {success: true, points: [...]}
           pointsData = data['points'] ?? [];
         } else if (data is List<dynamic>) {
-          // 기존 API 형식: [...] (직접 배열)
           pointsData = data;
         }
 
@@ -130,10 +130,8 @@ class _AppPmState extends State<AppPm> {
         if (data is Map<String, dynamic> &&
             data.containsKey('success') &&
             data['success'] == true) {
-          // 새로운 API 형식: {success: true, points: [...]}
           pointsData = data['points'] ?? [];
         } else if (data is List<dynamic>) {
-          // 기존 API 형식: [...] (직접 배열)
           pointsData = data;
         }
 
@@ -460,86 +458,144 @@ class _AppPmState extends State<AppPm> {
     );
   }
 
+  /// ✅ 당겨서 새로고침(RefreshIndicator) 적용
   Widget _buildHistoryList(List<Map<String, dynamic>> points) {
-    if (points.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.search_off_rounded, size: 60.sp, color: Colors.grey),
-            SizedBox(height: 16.h),
-            Text(
-              '해당 기간의 내역이 없습니다.',
-              style: TextStyle(color: AppColors.textSecondary, fontSize: 15.sp),
-            ),
-          ],
-        ),
-      );
-    }
-    return ListView.separated(
-      padding: EdgeInsets.fromLTRB(16.w, 0, 16.w, 16.h),
-      itemCount: points.length,
-      itemBuilder: (context, index) {
-        final item = points[index];
-        final isMerit = item['type'] == '상점';
-        final color = isMerit ? AppColors.success : AppColors.danger;
-        final score = item['score'] as int;
-        final icon = isMerit ? Icons.add_circle : Icons.remove_circle;
-
-        return Card(
-          elevation: 2,
-          shadowColor: Colors.grey.withOpacity(0.07),
-          color: AppColors.card,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12.r),
-          ),
-          child: Padding(
-            padding: EdgeInsets.all(16.w),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Icon(icon, color: color, size: 32.sp),
-                SizedBox(width: 16.w),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+    return RefreshIndicator(
+      color: AppColors.primary,
+      onRefresh: _loadPointHistory,
+      child:
+          _isLoading
+              // 로딩 중에도 당겨서 새로고침 가능하게 스크롤 뷰 유지
+              ? ListView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: EdgeInsets.symmetric(vertical: 80.h),
+                children: [
+                  Center(
+                    child: Column(
+                      children: [
+                        CircularProgressIndicator(
+                          color: AppColors.primary,
+                          strokeWidth: 3.w,
+                        ),
+                        SizedBox(height: 12.h),
+                        Text(
+                          '불러오는 중...',
+                          style: TextStyle(
+                            color: AppColors.textSecondary,
+                            fontSize: 14.sp,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              )
+              : (points.isEmpty
+                  // 비어 있어도 새로고침 가능
+                  ? ListView(
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    padding: EdgeInsets.symmetric(
+                      vertical: 80.h,
+                      horizontal: 16.w,
+                    ),
                     children: [
-                      Text(
-                        item['reason'],
-                        style: TextStyle(
-                          fontSize: 15.sp,
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.textPrimary,
-                        ),
-                        softWrap: true,
-                        overflow: TextOverflow.visible,
-                      ),
-                      SizedBox(height: 6.h),
-                      Text(
-                        '${_dateFormatter.format(item['date'])} | ${item['giver']}',
-                        style: TextStyle(
-                          color: AppColors.textSecondary,
-                          fontSize: 13.sp,
-                        ),
+                      Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.search_off_rounded,
+                            size: 60.sp,
+                            color: Colors.grey,
+                          ),
+                          SizedBox(height: 16.h),
+                          Text(
+                            '해당 기간의 내역이 없습니다.',
+                            style: TextStyle(
+                              color: AppColors.textSecondary,
+                              fontSize: 15.sp,
+                            ),
+                          ),
+                          SizedBox(height: 8.h),
+                          Text(
+                            '아래로 당겨서 새로고침',
+                            style: TextStyle(
+                              color: AppColors.textSecondary.withOpacity(0.8),
+                              fontSize: 13.sp,
+                            ),
+                          ),
+                        ],
                       ),
                     ],
-                  ),
-                ),
-                SizedBox(width: 16.w),
-                Text(
-                  score > 0 ? '+$score' : '$score',
-                  style: TextStyle(
-                    fontSize: 20.sp,
-                    fontWeight: FontWeight.bold,
-                    color: color,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        );
-      },
-      separatorBuilder: (context, index) => SizedBox(height: 12.h),
+                  )
+                  : ListView.separated(
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    padding: EdgeInsets.fromLTRB(16.w, 0, 16.w, 16.h),
+                    itemCount: points.length,
+                    itemBuilder: (context, index) {
+                      final item = points[index];
+                      final isMerit = item['type'] == '상점';
+                      final color =
+                          isMerit ? AppColors.success : AppColors.danger;
+                      final score = item['score'] as int;
+                      final icon =
+                          isMerit ? Icons.add_circle : Icons.remove_circle;
+
+                      return Card(
+                        elevation: 2,
+                        shadowColor: Colors.grey.withOpacity(0.07),
+                        color: AppColors.card,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12.r),
+                        ),
+                        child: Padding(
+                          padding: EdgeInsets.all(16.w),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Icon(icon, color: color, size: 32.sp),
+                              SizedBox(width: 16.w),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      item['reason'],
+                                      style: TextStyle(
+                                        fontSize: 15.sp,
+                                        fontWeight: FontWeight.bold,
+                                        color: AppColors.textPrimary,
+                                      ),
+                                      softWrap: true,
+                                      overflow: TextOverflow.visible,
+                                    ),
+                                    SizedBox(height: 6.h),
+                                    Text(
+                                      '${_dateFormatter.format(item['date'])} | ${item['giver']}',
+                                      style: TextStyle(
+                                        color: AppColors.textSecondary,
+                                        fontSize: 13.sp,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              SizedBox(width: 16.w),
+                              Text(
+                                score > 0 ? '+$score' : '$score',
+                                style: TextStyle(
+                                  fontSize: 20.sp,
+                                  fontWeight: FontWeight.bold,
+                                  color: color,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
+                    separatorBuilder:
+                        (context, index) => SizedBox(height: 12.h),
+                  )),
     );
   }
 }

@@ -96,11 +96,12 @@ class _MyAppState extends State<MyApp> {
     if (!_isInitialized) {
       // 로딩 화면 표시
       return MaterialApp(
+        debugShowCheckedModeBanner: false,
         home: Scaffold(
           body: Center(
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
-              children: [
+              children: const [
                 CircularProgressIndicator(),
                 SizedBox(height: 16),
                 Text('앱을 준비하고 있습니다...'),
@@ -111,13 +112,48 @@ class _MyAppState extends State<MyApp> {
       );
     }
 
+    // ✅ 초기 진입은 home으로 분기, 라우트 테이블은 그대로 유지
+    final bool goHome = (_initialRoute == '/home');
+
     return MaterialApp(
       title: 'KBU Dormitory',
       debugShowCheckedModeBanner: false,
-      initialRoute: _initialRoute,
+
+      // ⬇️ 여기 핵심: initialRoute 제거, 대신 home으로 분기
+      home: goHome ? const HomeShell() : const AppLogin(),
+
+      // 혹시 이상한 경로로 진입해도 안전망
+      onUnknownRoute:
+          (_) => MaterialPageRoute(builder: (_) => const AppLogin()),
+
+      // 필요 시 동적 라우트도 안전하게 처리
+      onGenerateRoute: (settings) {
+        switch (settings.name) {
+          case '/login':
+            return MaterialPageRoute(builder: (_) => const AppLogin());
+          case '/home':
+            return MaterialPageRoute(builder: (_) => const HomeShell());
+          case '/settings':
+            return MaterialPageRoute(builder: (_) => const AppSetting());
+          case '/pm':
+            return MaterialPageRoute(builder: (_) => const AppPm());
+          case '/dinner':
+            return MaterialPageRoute(builder: (_) => const AppDinner());
+          case '/as':
+            return MaterialPageRoute(builder: (_) => const AppAs());
+          case '/overnight':
+            return MaterialPageRoute(builder: (_) => const OverNight());
+          case '/':
+            return MaterialPageRoute(builder: (_) => const AppLogin());
+          default:
+            return null; // onUnknownRoute로 빠짐
+        }
+      },
+
+      // 네임드 네비게이션을 계속 쓰고 싶으면 routes도 유지(중복 허용)
       routes: {
         '/login': (context) => const AppLogin(),
-        '/home': (context) => HomeShell(),
+        '/home': (context) => const HomeShell(),
         '/settings': (context) => const AppSetting(),
         '/pm': (context) => const AppPm(),
         '/dinner': (context) => const AppDinner(),
@@ -195,49 +231,49 @@ class CustomNotificationDialog extends StatelessWidget {
       final date = DateTime.parse(dateString);
       final notificationDate = DateTime(date.year, date.month, date.day);
       final difference = today.difference(notificationDate).inDays;
-      if (difference == 0) {
-        return '오늘';
-      } else if (difference == 1) {
-        return '어제';
-      } else if (difference > 1 && difference < 30) {
-        return '$difference일 전';
-      } else {
-        return dateString;
-      }
-    } catch (e) {
+      if (difference == 0) return '오늘';
+      if (difference == 1) return '어제';
+      if (difference > 1 && difference < 30) return '$difference일 전';
+      return dateString;
+    } catch (_) {
       return dateString;
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    // (선택) 시스템 글자 확대가 너무 커서 줄바꿈이 생기면 주석 해제
+    // final media = MediaQuery.of(context);
+    // return MediaQuery(
+    //   data: media.copyWith(textScaler: const TextScaler.linear(1.0)),
+    //   child: _buildDialog(context),
+    // );
+
+    return _buildDialog(context);
+  }
+
+  Widget _buildDialog(BuildContext context) {
     return Dialog(
       backgroundColor: Colors.white,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(20.r), // ✅ r 적용
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20.r)),
       child: Padding(
-        padding: EdgeInsets.symmetric(
-          vertical: 24.h,
-          horizontal: 20.w,
-        ), // ✅ h, w 적용
+        padding: EdgeInsets.symmetric(vertical: 24.h, horizontal: 20.w),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // --- 헤더 ---
             Padding(
               padding: EdgeInsets.only(left: 4.w, bottom: 16.h),
               child: Text(
                 '알림',
                 style: TextStyle(
                   fontWeight: FontWeight.bold,
-                  fontSize: 22.sp, // ✅ sp 적용
+                  fontSize: 22.sp,
                   color: const Color(0xFF34495E),
                 ),
               ),
             ),
-            // --- 알림 목록 or "없음" 메시지 ---
+
             notifications.isEmpty
                 ? _buildEmptyState()
                 : Flexible(
@@ -260,23 +296,33 @@ class CustomNotificationDialog extends StatelessWidget {
                             ),
                           ),
                           SizedBox(width: 16.w),
-                          // 내용
+
+                          // 내용(한 줄 고정 + 말줄임 적용)
                           Expanded(
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
+                                // ✅ 제목 한 줄 + 말줄임 + 줄바꿈 금지
                                 Text(
                                   item.title,
+                                  maxLines: 1,
+                                  softWrap: false,
+                                  overflow: TextOverflow.ellipsis,
                                   style: TextStyle(
                                     color: const Color(0xFF34495E),
                                     fontSize: 15.sp,
-                                    fontWeight: FontWeight.w500,
+                                    fontWeight: FontWeight.w600,
+                                    height: 1.1,
                                   ),
                                 ),
                                 if (item.subtitle.isNotEmpty) ...[
                                   SizedBox(height: 2.h),
+                                  // ✅ 부제도 한 줄 고정
                                   Text(
                                     item.subtitle,
+                                    maxLines: 1,
+                                    softWrap: false,
+                                    overflow: TextOverflow.ellipsis,
                                     style: TextStyle(
                                       fontSize: 13.sp,
                                       color: const Color(0xFF5D6D7E),
@@ -286,6 +332,9 @@ class CustomNotificationDialog extends StatelessWidget {
                                 SizedBox(height: 4.h),
                                 Text(
                                   _formatDate(item.date),
+                                  maxLines: 1,
+                                  softWrap: false,
+                                  overflow: TextOverflow.ellipsis,
                                   style: TextStyle(
                                     color: const Color(0xFF7F8C8D),
                                     fontSize: 12.sp,
@@ -294,6 +343,7 @@ class CustomNotificationDialog extends StatelessWidget {
                               ],
                             ),
                           ),
+
                           // X 버튼
                           IconButton(
                             icon: Icon(
@@ -309,14 +359,16 @@ class CustomNotificationDialog extends StatelessWidget {
                       );
                     },
                     separatorBuilder:
-                        (context, index) => Divider(
+                        (_, __) => Divider(
                           height: 1.h,
                           color: const Color(0xFFF0F2F5),
                         ),
                   ),
                 ),
+
             SizedBox(height: 24.h),
-            // --- 닫기 버튼 ---
+
+            // 닫기 버튼
             ElevatedButton(
               onPressed: () => Navigator.of(context).pop(),
               style: ElevatedButton.styleFrom(
@@ -338,7 +390,6 @@ class CustomNotificationDialog extends StatelessWidget {
     );
   }
 
-  // 알림이 없을 때 보여줄 위젯
   Widget _buildEmptyState() {
     return Container(
       padding: EdgeInsets.symmetric(vertical: 40.h),
@@ -522,8 +573,6 @@ class _HomeShellState extends State<HomeShell> {
     // 앱 시작 시 알림 로드 (더 늦은 시점에 실행)
     WidgetsBinding.instance.addPostFrameCallback((_) {
       print('🔔 PostFrameCallback 실행');
-
-      // 약간의 지연을 두고 실행 (Provider 초기화 대기)
       Future.delayed(const Duration(milliseconds: 500), () {
         print('🔔 지연 후 _loadNotifications 호출');
         _loadNotifications();
@@ -559,7 +608,6 @@ class _HomeShellState extends State<HomeShell> {
     setState(() {
       _selectedIndex = index;
     });
-    // 홈 카드 클릭 시에도 페이지 인덱스 저장
     _savePageIndex(index);
   }
 
@@ -640,11 +688,9 @@ class _HomeShellState extends State<HomeShell> {
   void _showNotificationsDialog() {
     print('🔔 다이얼로그 열기 - 현재 알림 개수: ${_notifications.length}');
 
-    // 알림이 비어있으면 다시 로드 시도
     if (_notifications.isEmpty) {
       print('🔔 알림이 비어있어서 다시 로드 시도');
       _loadNotifications().then((_) {
-        // 로드 완료 후 다이얼로그 표시
         _showNotificationDialogInternal();
       });
     } else {
@@ -658,19 +704,18 @@ class _HomeShellState extends State<HomeShell> {
       barrierDismissible: true,
       builder:
           (context) => CustomNotificationDialog(
-            notifications: _notifications, // 직접 현재 리스트 전달
+            notifications: _notifications,
             onDelete: (idx) {
-              Navigator.of(context).pop(); // 먼저 다이얼로그 닫기
+              Navigator.of(context).pop();
               setState(() {
-                _notifications.removeAt(idx); // 알림 삭제
+                _notifications.removeAt(idx);
               });
             },
           ),
     ).then((_) {
-      // 다이얼로그가 닫힐 때 모든 알림을 읽음 처리 (빨간 점 제거)
       print('🔔 알림 다이얼로그 닫힘 - 모든 알림 읽음 처리');
       setState(() {
-        _notifications.clear(); // 모든 알림 제거하여 빨간 점 숨김
+        _notifications.clear();
       });
     });
   }
@@ -741,7 +786,6 @@ class _HomeShellState extends State<HomeShell> {
             ),
             onPressed: _showNotificationsDialog,
           ),
-          // 알림 있을 때 빨간 점 표시
           if (_notifications.isNotEmpty)
             Positioned(
               right: 8.w,
