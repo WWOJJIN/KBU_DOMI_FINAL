@@ -1841,7 +1841,7 @@ class _AdInPageState extends State<AdInPage>
         } else {
           cardColor = Colors.white;
           textColor = AppColors.fontPrimary;
-          onTapCallback = () => _showStudentsForRoomAssignment(context, room);
+          onTapCallback = () => _showOccupancyDetails(context, room);
         }
         return InkWell(
           borderRadius: BorderRadius.circular(8.r),

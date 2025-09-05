@@ -70,7 +70,7 @@ class _HomePageState extends State<HomePage> {
     },
     {
       "icon": Icons.exit_to_app_rounded,
-      "title": "퇴실신청",
+      "title": "퇴소신청",
       "page": () => const CheckoutApplyPage(),
     },
   ];

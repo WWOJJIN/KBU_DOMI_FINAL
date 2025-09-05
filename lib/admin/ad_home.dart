@@ -95,7 +95,7 @@ class _AdHomePageState extends State<AdHomePage> {
 
     {
       "icon": Icons.exit_to_app_rounded,
-      "title": "퇴실관리",
+      "title": "퇴소관리",
       "page": () => AdOutPage(),
     },
     {
