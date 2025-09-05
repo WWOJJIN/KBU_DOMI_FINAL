@@ -2244,25 +2244,15 @@ class _AdInPageState extends State<AdInPage>
                       horizontal: 12.w,
                       vertical: 6.h,
                     ),
-                    decoration: BoxDecoration(
-                      color:
-                          isVerified ? AppColors.statusConfirmed : Colors.white,
-                      borderRadius: BorderRadius.circular(20.r),
-                      border: Border.all(
-                        color:
-                            isVerified
-                                ? AppColors.statusConfirmed
-                                : AppColors.border,
-                        width: 1,
-                      ),
-                    ),
                     child: Text(
                       isVerified ? '확인' : '확인',
                       textAlign: TextAlign.center,
                       style: TextStyle(
                         fontSize: 12.sp,
                         color:
-                            isVerified ? Colors.white : AppColors.fontPrimary,
+                            isVerified
+                                ? AppColors.statusConfirmed
+                                : AppColors.statusConfirmed,
                         fontWeight: FontWeight.w600,
                       ),
                     ),
@@ -2419,36 +2409,23 @@ class _AdInPageState extends State<AdInPage>
             ),
             // 이미 확인된 문서인지 여부에 따라 버튼 표시 변경
             if (document['isVerified'] == true)
-              Container(
-                padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
-                decoration: BoxDecoration(
-                  color: AppColors.statusConfirmed.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(8.r),
-                  border: Border.all(color: AppColors.statusConfirmed),
-                ),
-                child: Container(
+              ElevatedButton(
+                onPressed: null, // 이미 확인된 문서는 클릭 불가
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.statusConfirmed,
+                  foregroundColor: Colors.white,
                   padding: EdgeInsets.symmetric(
-                    horizontal: 12.w,
-                    vertical: 6.h,
+                    horizontal: 20.w,
+                    vertical: 12.h,
                   ),
-                  decoration: BoxDecoration(
-                    color: AppColors.statusConfirmed,
-                    borderRadius: BorderRadius.circular(20.r),
-                    border: Border.all(
-                      color: AppColors.statusConfirmed,
-                      width: 1,
-                    ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8.r),
                   ),
-                  child: Text(
-                    '확인',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: 12.sp,
-                      color: Colors.white,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
+                  disabledBackgroundColor:
+                      AppColors.statusConfirmed, // 비활성화 상태에서도 같은 색상
+                  disabledForegroundColor: Colors.white,
                 ),
+                child: const Text('확인'),
               )
             else
               ElevatedButton(
@@ -2459,6 +2436,10 @@ class _AdInPageState extends State<AdInPage>
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.statusConfirmed,
                   foregroundColor: Colors.white,
+                  padding: EdgeInsets.symmetric(
+                    horizontal: 20.w,
+                    vertical: 12.h,
+                  ),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(8.r),
                   ),
