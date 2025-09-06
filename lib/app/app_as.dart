@@ -8,7 +8,7 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:provider/provider.dart';
 import '../student_provider.dart';
-import 'package:kbu_domi/env.dart';
+import 'package:kbu_domi/app/env_app.dart';
 
 // --- 앱 공통 테마 ---
 class AppColors {

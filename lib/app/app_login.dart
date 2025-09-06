@@ -4,7 +4,7 @@ import 'dart:convert';
 import 'package:flutter_screenutil/flutter_screenutil.dart'; // ✅ 반응형
 import 'package:provider/provider.dart';
 import '../student_provider.dart';
-import 'package:kbu_domi/env.dart';
+import 'package:kbu_domi/app/env_app.dart';
 
 class AppColors {
   static const primary = Color(0xFF4A69E2);

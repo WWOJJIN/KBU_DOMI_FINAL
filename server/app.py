@@ -1164,6 +1164,8 @@ def get_student_by_id(student_id):
     try:
         with conn.cursor() as cur:
             # 학생 기본 정보와 룸메이트 정보를 함께 조회
+            # 1. 먼저 Domi_Students의 roommate_id로 JOIN 시도
+            # 2. roommate_id가 null인 경우, Roommate_Requests에서 승인된 관계 찾기
             cur.execute('''
                 SELECT
                     ds.student_id, ds.name, ds.dept, ds.gender, ds.grade, ds.phone_num,
@@ -1171,12 +1173,41 @@ def get_student_by_id(student_id):
                     ds.par_name, ds.par_phone, ds.payback_bank, ds.payback_name, ds.payback_num,
                     ds.dorm_building, ds.room_num, ds.stat, ds.check_in, ds.check_out,
                     ds.academic_status, ds.roommate_id, ds.password, ds.smoking,
-                    rm.name as roommate_name, rm.dept as roommate_dept
+                    COALESCE(rm.name, 
+                        CASE 
+                            WHEN rr1.requested_id IS NOT NULL THEN rm_rr1.name
+                            WHEN rr2.requester_id IS NOT NULL THEN rm_rr2.name
+                            ELSE NULL
+                        END
+                    ) as roommate_name,
+                    COALESCE(rm.dept,
+                        CASE 
+                            WHEN rr1.requested_id IS NOT NULL THEN rm_rr1.dept
+                            WHEN rr2.requester_id IS NOT NULL THEN rm_rr2.dept
+                            ELSE NULL
+                        END
+                    ) as roommate_dept
                 FROM Domi_Students ds
                 LEFT JOIN Domi_Students rm ON ds.roommate_id = rm.student_id
+                LEFT JOIN Roommate_Requests rr1 ON ds.student_id = rr1.requester_id 
+                    AND rr1.status = 'accepted' AND rr1.roommate_type = 'mutual'
+                LEFT JOIN Domi_Students rm_rr1 ON rr1.requested_id = rm_rr1.student_id
+                LEFT JOIN Roommate_Requests rr2 ON ds.student_id = rr2.requested_id 
+                    AND rr2.status = 'accepted' AND rr2.roommate_type = 'mutual'
+                LEFT JOIN Domi_Students rm_rr2 ON rr2.requester_id = rm_rr2.student_id
                 WHERE ds.student_id = %s
             ''', ('%Y-%m-%d', student_id))
             data = cur.fetchone()
+            
+            # 룸메이트 관련 디버깅 로그
+            if data:
+                print(f'🔍 학생 {student_id} 정보 조회 결과:')
+                print(f'  - 이름: {data.get("name")}')
+                print(f'  - roommate_id: {data.get("roommate_id")}')
+                print(f'  - roommate_name: {data.get("roommate_name")}')
+                print(f'  - roommate_dept: {data.get("roommate_dept")}')
+            else:
+                print(f'❌ 학생 {student_id}를 찾을 수 없습니다')
 
         if data:
             return jsonify({'success': True, 'user': data})
@@ -1204,6 +1235,223 @@ def get_student_by_name(name):
                 {'success': False, 'message': '학생을 찾을 수 없습니다.'}), 404
     finally:
         conn.close()
+
+
+@app.route('/api/test/set-roommate', methods=['POST'])
+def set_roommate_relationship():
+    """테스트용: 룸메이트 관계 설정"""
+    data = request.json
+    student1_name = data.get('student1_name')
+    student2_name = data.get('student2_name')
+    
+    if not student1_name or not student2_name:
+        return jsonify({'error': '두 학생의 이름이 모두 필요합니다'}), 400
+    
+    conn = get_db()
+    try:
+        with conn.cursor() as cur:
+            # 두 학생의 ID 조회
+            cur.execute('SELECT student_id, name FROM Domi_Students WHERE name IN (%s, %s)', 
+                       (student1_name, student2_name))
+            students = cur.fetchall()
+            
+            print(f'🔍 룸메이트 설정 - 조회된 학생: {students}')
+            
+            if len(students) != 2:
+                return jsonify({'error': f'두 학생을 모두 찾을 수 없습니다. 조회된 학생 수: {len(students)}'}), 404
+            
+            student1_id = students[0]['student_id']
+            student2_id = students[1]['student_id']
+            
+            print(f'🔍 룸메이트 설정 - {student1_name}({student1_id}) <-> {student2_name}({student2_id})')
+            
+            # 서로를 룸메이트로 설정
+            cur.execute('UPDATE Domi_Students SET roommate_id = %s WHERE student_id = %s', 
+                       (student2_id, student1_id))
+            cur.execute('UPDATE Domi_Students SET roommate_id = %s WHERE student_id = %s', 
+                       (student1_id, student2_id))
+            
+            conn.commit()
+            
+            print(f'✅ 룸메이트 관계 설정 완료')
+            
+            return jsonify({
+                'success': True, 
+                'message': f'{student1_name}과 {student2_name}가 룸메이트로 설정되었습니다',
+                'student1_id': student1_id,
+                'student2_id': student2_id
+            })
+            
+    except Exception as e:
+        conn.rollback()
+        print(f'❌ 룸메이트 설정 실패: {e}')
+        return jsonify({'error': f'룸메이트 설정 실패: {str(e)}'}), 500
+    finally:
+        conn.close()
+
+
+@app.route('/api/test/check-roommate', methods=['GET'])
+def check_roommate_relationship():
+    """테스트용: 룸메이트 관계 확인"""
+    student_name = request.args.get('student_name')
+    
+    if not student_name:
+        return jsonify({'error': '학생 이름이 필요합니다'}), 400
+    
+    conn = get_db()
+    try:
+        with conn.cursor() as cur:
+            # 학생과 룸메이트 정보 함께 조회
+            cur.execute('''
+                SELECT 
+                    ds.student_id, ds.name, ds.roommate_id,
+                    rm.name as roommate_name, rm.dept as roommate_dept
+                FROM Domi_Students ds
+                LEFT JOIN Domi_Students rm ON ds.roommate_id = rm.student_id
+                WHERE ds.name = %s
+            ''', (student_name,))
+            data = cur.fetchone()
+            
+            if not data:
+                return jsonify({'error': f'{student_name} 학생을 찾을 수 없습니다'}), 404
+            
+            return jsonify({
+                'success': True,
+                'student_id': data['student_id'],
+                'student_name': data['name'],
+                'roommate_id': data['roommate_id'],
+                'roommate_name': data['roommate_name'],
+                'roommate_dept': data['roommate_dept']
+            })
+            
+    except Exception as e:
+        return jsonify({'error': f'룸메이트 확인 실패: {str(e)}'}), 500
+    finally:
+        conn.close()
+
+
+@app.route('/api/test/list-students', methods=['GET'])
+def list_all_students():
+    """테스트용: 모든 학생 목록 조회"""
+    conn = get_db()
+    try:
+        with conn.cursor() as cur:
+            cur.execute('SELECT student_id, name, dept, roommate_id FROM Domi_Students ORDER BY name')
+            students = cur.fetchall()
+            
+            return jsonify({
+                'success': True,
+                'count': len(students),
+                'students': students
+            })
+            
+    except Exception as e:
+        return jsonify({'error': f'학생 목록 조회 실패: {str(e)}'}), 500
+    finally:
+        conn.close()
+
+
+@app.route('/api/test/fix-existing-roommates', methods=['POST'])
+def fix_existing_roommates():
+    """테스트용: 승인된 룸메이트 관계를 Domi_Students 테이블에 반영"""
+    conn = get_db()
+    try:
+        with conn.cursor() as cur:
+            # 승인된 상호 룸메이트 관계 찾기
+            cur.execute('''
+                SELECT DISTINCT r1.requester_id, r1.requested_id
+                FROM Roommate_Requests r1
+                INNER JOIN Roommate_Requests r2 ON r1.pair_id = r2.pair_id
+                WHERE r1.status = 'accepted' AND r2.status = 'accepted'
+                AND r1.roommate_type = 'mutual' AND r2.roommate_type = 'mutual'
+                AND r1.requester_id = r2.requested_id
+                AND r1.requested_id = r2.requester_id
+            ''')
+            
+            mutual_pairs = cur.fetchall()
+            fixed_count = 0
+            
+            for pair in mutual_pairs:
+                student1_id = pair['requester_id']
+                student2_id = pair['requested_id']
+                
+                # 현재 roommate_id 상태 확인
+                cur.execute('SELECT roommate_id FROM Domi_Students WHERE student_id = %s', (student1_id,))
+                student1_current = cur.fetchone()
+                cur.execute('SELECT roommate_id FROM Domi_Students WHERE student_id = %s', (student2_id,))
+                student2_current = cur.fetchone()
+                
+                # roommate_id가 null이거나 잘못된 경우에만 업데이트
+                if (not student1_current or student1_current['roommate_id'] != student2_id or
+                    not student2_current or student2_current['roommate_id'] != student1_id):
+                    
+                    # 상호 roommate_id 업데이트
+                    cur.execute('UPDATE Domi_Students SET roommate_id = %s WHERE student_id = %s', 
+                              (student2_id, student1_id))
+                    cur.execute('UPDATE Domi_Students SET roommate_id = %s WHERE student_id = %s', 
+                              (student1_id, student2_id))
+                    
+                    fixed_count += 1
+                    print(f"🔗 룸메이트 관계 수정: {student1_id} ↔ {student2_id}")
+            
+            conn.commit()
+            
+            return jsonify({
+                'success': True,
+                'message': f'{fixed_count}개의 룸메이트 관계를 수정했습니다.',
+                'fixed_pairs': fixed_count
+            })
+            
+    except Exception as e:
+        conn.rollback()
+        return jsonify({'error': f'룸메이트 관계 수정 실패: {str(e)}'}), 500
+    finally:
+        conn.close()
+
+
+@app.route('/api/test/manual-roommate-fix', methods=['POST'])
+def manual_roommate_fix():
+    """테스트용: 특정 학생들의 roommate_id를 수동으로 연결"""
+    data = request.json
+    student1_id = data.get('student1_id')
+    student2_id = data.get('student2_id')
+    
+    if not student1_id or not student2_id:
+        return jsonify({'error': '두 학생의 ID가 모두 필요합니다.'}), 400
+    
+    conn = get_db()
+    try:
+        with conn.cursor() as cur:
+            # 두 학생이 모두 존재하는지 확인
+            cur.execute('SELECT name FROM Domi_Students WHERE student_id = %s', (student1_id,))
+            student1 = cur.fetchone()
+            cur.execute('SELECT name FROM Domi_Students WHERE student_id = %s', (student2_id,))
+            student2 = cur.fetchone()
+            
+            if not student1 or not student2:
+                return jsonify({'error': '존재하지 않는 학생 ID입니다.'}), 404
+            
+            # 상호 roommate_id 업데이트
+            cur.execute('UPDATE Domi_Students SET roommate_id = %s WHERE student_id = %s', 
+                      (student2_id, student1_id))
+            cur.execute('UPDATE Domi_Students SET roommate_id = %s WHERE student_id = %s', 
+                      (student1_id, student2_id))
+            
+            conn.commit()
+            
+            return jsonify({
+                'success': True,
+                'message': f'{student1["name"]}과 {student2["name"]}을 룸메이트로 연결했습니다.',
+                'student1': {'id': student1_id, 'name': student1['name']},
+                'student2': {'id': student2_id, 'name': student2['name']}
+            })
+            
+    except Exception as e:
+        conn.rollback()
+        return jsonify({'error': f'룸메이트 연결 실패: {str(e)}'}), 500
+    finally:
+        conn.close()
+
 
 # --- 룸메이트 신청 관련 API (수정됨) ---
 
@@ -1469,6 +1717,18 @@ def accept_roommate_request(request_id):
                     change_reason, changed_by, changed_by_type
                 ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
             ''', (request_id, request_info['requester_id'], request_info['requested_id'], 'pending', 'accepted', '수락', request_info['requested_id'], 'student'))
+
+            # ✅ Domi_Students 테이블의 roommate_id 필드 업데이트 (상호 연결)
+            cur.execute(
+                "UPDATE Domi_Students SET roommate_id = %s WHERE student_id = %s",
+                (requested_id, requester_id)  # 신청자의 roommate_id를 피신청자 ID로 설정
+            )
+            cur.execute(
+                "UPDATE Domi_Students SET roommate_id = %s WHERE student_id = %s", 
+                (requester_id, requested_id)  # 피신청자의 roommate_id를 신청자 ID로 설정
+            )
+            
+            print(f"🔗 룸메이트 관계 업데이트: {requester_id} ↔ {requested_id}")
 
             conn.commit()
             if cur.rowcount == 0:

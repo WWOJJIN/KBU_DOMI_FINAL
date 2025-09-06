@@ -402,6 +402,15 @@ class _DashPageState extends State<DashPage> {
         final data = json.decode(utf8.decode(response.bodyBytes));
         print('🔍 웹 대시보드 - 학생 정보 API 응답: $data');
 
+        // 룸메이트 관련 필드 상세 로깅
+        if (data is Map && data.containsKey('user')) {
+          final user = data['user'];
+          print('🔍 룸메이트 관련 필드 확인:');
+          print('  - roommate_id: ${user['roommate_id']}');
+          print('  - roommate_name: ${user['roommate_name']}');
+          print('  - roommate_dept: ${user['roommate_dept']}');
+        }
+
         // StudentProvider에 최신 정보 업데이트 (연락처/환불 정보 포함)
         final studentProvider = Provider.of<StudentProvider>(
           context,

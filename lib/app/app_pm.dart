@@ -6,7 +6,7 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:provider/provider.dart';
 import '../student_provider.dart';
-import 'package:kbu_domi/env.dart';
+import 'package:kbu_domi/app/env_app.dart';
 
 // --- KBU 도미토리 스타일 컬러 ---
 const Color kKbuBg = Color(0xFFF4F6FA);

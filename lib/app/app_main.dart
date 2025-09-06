@@ -12,7 +12,7 @@ import 'package:kbu_domi/app/app_setting.dart';
 import 'package:kbu_domi/app/app_overnight.dart';
 import 'package:kbu_domi/student_provider.dart';
 import 'package:kbu_domi/services/storage_service.dart';
-import 'package:kbu_domi/env.dart';
+import 'package:kbu_domi/app/env_app.dart';
 
 void main() {
   runApp(const RootApp());

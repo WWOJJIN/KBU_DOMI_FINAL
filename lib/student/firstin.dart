@@ -1,7 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'dart:html' as html; // ⭐️ Flutter Web에서 팝업, postMessage
+import 'package:flutter/foundation.dart' show kIsWeb;
+
+// 플랫폼별로 다른 구현을 조건부 임포트
+import 'package:kbu_domi/web_compat/html_apis_stub.dart'
+    if (dart.library.html) 'package:kbu_domi/web_compat/html_apis_web.dart'
+    as html_apis;
+
 import 'dart:convert';
 import 'package:http/http.dart' as http; // ⭐️ API 호출을 위해 추가
 import 'package:kbu_domi/env.dart';
@@ -155,56 +161,61 @@ class _FirstInPageState extends State<FirstInPage> {
       _selectedNationality = '대한민국';
     }
 
-    // ⭐️ 카카오/다음 주소 팝업에서 온 postMessage 수신 (수정)
-    html.window.onMessage.listen((event) {
-      print('메시지 수신됨: ${event.data}'); // 디버깅용
-      print('데이터 타입: ${event.data.runtimeType}'); // 디버깅용
+    // ⭐️ 웹에서만 카카오/다음 주소 팝업에서 온 postMessage 수신
+    if (kIsWeb) {
+      html_apis.listenMessage((data) {
+        print('메시지 수신됨: $data'); // 디버깅용
+        print('데이터 타입: ${data.runtimeType}'); // 디버깅용
 
-      if (event.data != null) {
-        try {
-          // 안전한 방법으로 Map 변환
-          Map<String, dynamic> data;
+        if (data != null) {
+          try {
+            // 안전한 방법으로 Map 변환
+            Map<String, dynamic> mapData;
 
-          if (event.data is Map) {
-            // LinkedMap이나 다른 Map 타입을 안전하게 변환
-            data = Map<String, dynamic>.from(event.data);
-          } else {
-            print('지원하지 않는 데이터 형식: ${event.data.runtimeType}');
-            return;
-          }
+            if (data is Map) {
+              // LinkedMap이나 다른 Map 타입을 안전하게 변환
+              mapData = Map<String, dynamic>.from(data);
+            } else {
+              print('지원하지 않는 데이터 형식: ${data.runtimeType}');
+              return;
+            }
 
-          print('변환된 데이터: $data'); // 디버깅용
+            print('변환된 데이터: $mapData'); // 디버깅용
 
-          // zonecode 키가 있는지 확인하고 UI 업데이트
-          if (data.containsKey('zonecode') && data['zonecode'] != null) {
-            setState(() {
-              _postalCodeController.text = data['zonecode']?.toString() ?? '';
-              _address1Controller.text = data['roadAddress']?.toString() ?? '';
+            // zonecode 키가 있는지 확인하고 UI 업데이트
+            if (mapData.containsKey('zonecode') &&
+                mapData['zonecode'] != null) {
+              setState(() {
+                _postalCodeController.text =
+                    mapData['zonecode']?.toString() ?? '';
+                _address1Controller.text =
+                    mapData['roadAddress']?.toString() ?? '';
 
-              // 지역구분 조합 (시도 + 시군구)
-              String region = '';
-              if (data['sido'] != null) {
-                region = data['sido'].toString();
-                if (data['sigungu'] != null) {
-                  region += ' ${data['sigungu'].toString()}';
+                // 지역구분 조합 (시도 + 시군구)
+                String region = '';
+                if (mapData['sido'] != null) {
+                  region = mapData['sido'].toString();
+                  if (mapData['sigungu'] != null) {
+                    region += ' ${mapData['sigungu'].toString()}';
+                  }
                 }
-              }
-              _regionController.text = region;
-            });
+                _regionController.text = region;
+              });
 
-            print('주소 정보 업데이트 완료'); // 디버깅용
-            print('우편번호: ${_postalCodeController.text}');
-            print('기본주소: ${_address1Controller.text}');
-            print('지역구분: ${_regionController.text}');
-          } else {
-            print('zonecode가 없거나 null입니다: $data');
+              print('주소 정보 업데이트 완료'); // 디버깅용
+              print('우편번호: ${_postalCodeController.text}');
+              print('기본주소: ${_address1Controller.text}');
+              print('지역구분: ${_regionController.text}');
+            } else {
+              print('zonecode가 없거나 null입니다: $mapData');
+            }
+          } catch (e) {
+            print('주소 데이터 처리 오류: $e');
+            print('스택 트레이스: ${e.toString()}');
           }
-        } catch (e) {
-          print('주소 데이터 처리 오류: $e');
-          print('스택 트레이스: ${e.toString()}');
         }
-      }
-    });
+      });
+    }
   }
 
   // --- 2. 페이지 및 로직 ---
@@ -227,11 +238,16 @@ class _FirstInPageState extends State<FirstInPage> {
   }
 
   void _findAddress() {
-    html.window.open(
-      'daum_postcode_popup.html',
-      'daum_postcode_popup',
-      'width=500,height=600,scrollbars=yes',
-    );
+    if (kIsWeb) {
+      html_apis.openPopup(
+        'daum_postcode_popup.html',
+        'daum_postcode_popup',
+        'width=500,height=600,scrollbars=yes',
+      );
+    } else {
+      // 모바일에서는 주소 찾기 기능이 지원되지 않음을 알림
+      _showErrorDialog('주소 찾기 기능은 웹에서만 지원됩니다.');
+    }
   }
 
   // ⭐️ 완전히 새로운 필수값 검증 로직
@@ -680,7 +696,7 @@ class _FirstInPageState extends State<FirstInPage> {
               ['1학기', '2학기'],
               _selectedSemester,
               (v) => setState(() => _selectedSemester = v!),
-              hasError: _nameError,
+              hasError: _semesterError,
             ),
           ]),
           _buildReadOnlyGrid([
