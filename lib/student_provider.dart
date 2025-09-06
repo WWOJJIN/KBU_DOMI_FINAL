@@ -65,10 +65,18 @@ class StudentProvider with ChangeNotifier {
     print('  - 최종 roommate: $roommate');
     print('  - 최종 roommateDept: $roommateDept');
 
-    // 🔧 룸메이트 정보가 없으면 Roommate_Requests에서 찾기
-    if ((roommate == null || roommate == 'null') && studentId != null) {
-      print('🔍 룸메이트 정보가 없어서 Roommate_Requests에서 조회 시도...');
-      await _fetchRoommateFromRequests(studentId!);
+    // 🔧 서버 API에서 roommate_name이 없으면 무조건 Roommate_Requests에서 찾기
+    if (!userData.containsKey('roommate_name') ||
+        roommate == null ||
+        roommate == 'null' ||
+        roommate == '' ||
+        roommate == 'null') {
+      print('🔍 서버 API에 룸메이트 정보 없음 - Roommate_Requests에서 조회 시도...');
+      if (studentId != null) {
+        await _fetchRoommateFromRequests(studentId!);
+      }
+    } else {
+      print('✅ 서버 API에서 룸메이트 정보 수신: $roommate ($roommateDept)');
     }
 
     // 로컬 저장소에 저장 (룸메이트 정보 포함)
@@ -106,7 +114,10 @@ class StudentProvider with ChangeNotifier {
   /// 저장된 정보에서 학생 데이터 복원
   Future<bool> loadFromStorage() async {
     try {
+      print('🔍 loadFromStorage 시작 - 저장된 정보 조회 중...');
       final savedInfo = await StorageService.getStudentInfo();
+      print('🔍 StorageService.getStudentInfo 결과: $savedInfo');
+
       if (savedInfo != null) {
         studentId = savedInfo['student_id']?.toString();
         name = savedInfo['name'];
@@ -125,6 +136,17 @@ class StudentProvider with ChangeNotifier {
         roommateDept = savedInfo['roommate_dept'];
 
         print('StudentProvider - 저장된 정보에서 복원 완료: $studentId');
+        print('🔍 복원된 룸메이트 정보: $roommate ($roommateDept)');
+
+        // 🔧 룸메이트 정보가 없으면 API에서 조회
+        if ((roommate == null || roommate == 'null' || roommate == '') &&
+            studentId != null) {
+          print('🔍 저장된 룸메이트 정보가 없어서 API에서 조회 시도...');
+          await _fetchRoommateFromRequests(studentId!);
+        } else if (roommate != null && roommate != 'null' && roommate != '') {
+          print('✅ 저장된 룸메이트 정보 사용: $roommate ($roommateDept)');
+        }
+
         notifyListeners();
         return true;
       }
@@ -163,10 +185,15 @@ class StudentProvider with ChangeNotifier {
             final roommateName = request['roommate_name'];
 
             print('🎯 승인된 룸메이트 발견 (내가 신청): $roommateName ($roommateId)');
+            print('🔍 요청 상세 정보: $request');
 
             // 룸메이트의 학과 정보 조회
             await _fetchRoommateDepartment(roommateId, roommateName);
             return;
+          } else {
+            print(
+              '🔍 조건 불일치 - status: ${request['status']}, type: ${request['roommate_type']}',
+            );
           }
         }
       }
@@ -194,10 +221,15 @@ class StudentProvider with ChangeNotifier {
             final roommateName = request['requester_name'];
 
             print('🎯 승인된 룸메이트 발견 (나에게 신청): $roommateName ($roommateId)');
+            print('🔍 요청 상세 정보: $request');
 
             // 룸메이트의 학과 정보 조회
             await _fetchRoommateDepartment(roommateId, roommateName);
             return;
+          } else {
+            print(
+              '🔍 조건 불일치 - status: ${request['status']}, type: ${request['roommate_type']}',
+            );
           }
         }
       }
@@ -230,7 +262,26 @@ class StudentProvider with ChangeNotifier {
 
         print('✅ 룸메이트 정보 최종 설정: $roommate ($roommateDept)');
 
-        notifyListeners(); // UI 업데이트
+        // 저장소에도 업데이트
+        final currentStudentInfo = await StorageService.getStudentInfo();
+        if (currentStudentInfo != null) {
+          currentStudentInfo['roommate_name'] = roommate;
+          currentStudentInfo['roommate_dept'] = roommateDept;
+          await StorageService.saveStudentInfo(currentStudentInfo);
+          print('💾 룸메이트 정보 저장소 업데이트 완료');
+        }
+
+        print('🔄 notifyListeners() 호출 - UI 업데이트 요청');
+
+        // UI 업데이트를 다음 프레임에서 안전하게 실행
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          notifyListeners(); // UI 업데이트
+        });
+
+        // 추가 확인을 위한 로그
+        print(
+          '🔍 최종 확인 - roommate: "$roommate", roommateDept: "$roommateDept"',
+        );
       } else {
         print('❌ 룸메이트 학과 정보 조회 실패: ${roommateInfoResponse.statusCode}');
       }

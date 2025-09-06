@@ -60,31 +60,47 @@ class _MyAppState extends State<MyApp> {
   /// 로그인 상태 확인 및 자동 복원
   Future<void> _checkLoginStatus() async {
     try {
+      print('🔍 학생 앱 로그인 상태 확인 시작...');
+
+      // StorageService 초기화
+      await StorageService.init();
+
       final studentProvider = Provider.of<StudentProvider>(
         context,
         listen: false,
       );
+
       final isLoggedIn = await studentProvider.isLoggedIn();
+      print('🔍 로그인 상태: $isLoggedIn');
 
       if (isLoggedIn) {
+        print('🔍 로그인 상태 확인됨 - 저장된 정보 복원 시도');
         final restored = await studentProvider.loadFromStorage();
-        if (restored) {
-          print('✅ 자동 로그인 복원 성공');
+        print('🔍 저장된 정보 복원 결과: $restored');
+        print('🔍 복원 후 studentId: ${studentProvider.studentId}');
+        print('🔍 복원 후 name: ${studentProvider.name}');
+
+        if (restored && studentProvider.studentId != null) {
+          print('✅ 자동 로그인 복원 성공 - 홈으로 이동');
           setState(() {
             _initialRoute = '/home';
             _isInitialized = true;
           });
           return;
+        } else {
+          print('❌ 저장된 정보 복원 실패 - 로그인 필요');
+          print('   - restored: $restored');
+          print('   - studentId: ${studentProvider.studentId}');
         }
       }
 
-      print('🔑 로그인 필요');
+      print('🔑 로그인 필요 - 로그인 페이지로 이동');
       setState(() {
         _initialRoute = '/login';
         _isInitialized = true;
       });
     } catch (e) {
-      print('자동 로그인 확인 실패: $e');
+      print('❌ 자동 로그인 확인 실패: $e');
       setState(() {
         _initialRoute = '/login';
         _isInitialized = true;
@@ -95,18 +111,33 @@ class _MyAppState extends State<MyApp> {
   @override
   Widget build(BuildContext context) {
     if (!_isInitialized) {
-      // 로딩 화면 표시
+      // 로딩 화면 표시 (화면 치우침 방지를 위해 전체 화면 차지)
       return MaterialApp(
         debugShowCheckedModeBanner: false,
         home: Scaffold(
-          body: Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: const [
-                CircularProgressIndicator(),
-                SizedBox(height: 16),
-                Text('앱을 준비하고 있습니다...'),
-              ],
+          backgroundColor: Colors.white,
+          body: SafeArea(
+            child: SizedBox.expand(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: const [
+                  CircularProgressIndicator(
+                    valueColor: AlwaysStoppedAnimation<Color>(
+                      Color(0xFF2C3E50),
+                    ),
+                  ),
+                  SizedBox(height: 24),
+                  Text(
+                    '앱을 준비하고 있습니다...',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w500,
+                      color: Color(0xFF2C3E50),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ),
@@ -528,19 +559,53 @@ class HomeShell extends StatefulWidget {
 class _HomeShellState extends State<HomeShell> {
   int _selectedIndex = 2; // 홈
   VoidCallback? _homeRefreshCallback;
+  bool _hasLoadedSavedIndex = false; // 🚨 중복 로드 방지 플래그
 
   /// 저장된 페이지 인덱스 로드
   Future<void> _loadSavedPageIndex() async {
+    // 🚨 중복 로드 방지 - 화면 크기 변경으로 인한 재초기화 시에도 한 번만 실행
+    if (_hasLoadedSavedIndex) {
+      print('🔍 이미 페이지 인덱스 로드됨 - 중복 실행 방지');
+      return;
+    }
+
     try {
+      print('🔍 저장된 학생 페이지 인덱스 로드 시작...');
       final savedIndex = await StorageService.getStudentPageIndex();
+      print('🔍 저장된 페이지 인덱스: $savedIndex');
+
+      _hasLoadedSavedIndex = true; // 🚨 로드 완료 플래그 설정
+
+      // 🚨 화면 크기 변경으로 인한 잘못된 재초기화 방지
+      // 현재 인덱스가 이미 올바른 값이면 변경하지 않음
+      if (_selectedIndex != 2 && savedIndex == 2) {
+        print('🔍 화면 크기 변경으로 인한 재초기화 감지 - 홈(2)으로 강제 복원 방지');
+        return;
+      }
+
       if (mounted && savedIndex >= 0 && savedIndex < _labels.length) {
+        // 🚨 AS 페이지(0)로의 의도하지 않은 이동 방지
+        if (savedIndex == 0 && _selectedIndex != 0) {
+          print('⚠️ AS 페이지(0)로의 의도하지 않은 이동 감지 - 홈(2)으로 유지');
+          setState(() {
+            _selectedIndex = 2; // 홈으로 강제 설정
+          });
+          // 올바른 인덱스로 저장
+          await StorageService.saveStudentPageIndex(2);
+          return;
+        }
+
         setState(() {
           _selectedIndex = savedIndex;
         });
-        print('학생 페이지 복원: $_selectedIndex');
+        print('✅ 학생 페이지 복원 완료: $_selectedIndex (${_labels[_selectedIndex]})');
+      } else {
+        print(
+          '🔍 저장된 인덱스가 유효하지 않음, 기본값 사용: $_selectedIndex (${_labels[_selectedIndex]})',
+        );
       }
     } catch (e) {
-      print('학생 페이지 인덱스 로드 실패: $e');
+      print('❌ 학생 페이지 인덱스 로드 실패: $e');
     }
   }
 
@@ -568,12 +633,14 @@ class _HomeShellState extends State<HomeShell> {
     super.initState();
     print('🔔 HomeShell initState 시작');
 
-    // 저장된 페이지 인덱스 로드
-    _loadSavedPageIndex();
-
-    // 앱 시작 시 알림 로드 (더 늦은 시점에 실행)
+    // 위젯이 완전히 빌드된 후에 실행
     WidgetsBinding.instance.addPostFrameCallback((_) {
       print('🔔 PostFrameCallback 실행');
+
+      // 저장된 페이지 인덱스 로드 (우선순위)
+      _loadSavedPageIndex();
+
+      // 알림 로드 (약간 지연)
       Future.delayed(const Duration(milliseconds: 500), () {
         print('🔔 지연 후 _loadNotifications 호출');
         _loadNotifications();

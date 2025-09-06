@@ -75,7 +75,15 @@ class _AppHomeState extends State<AppHome> with WidgetsBindingObserver {
     final studentId = studentProvider.studentId;
 
     if (studentId == null) {
-      Navigator.pushReplacementNamed(context, '/login');
+      print('❌ app_home - studentId가 null, 로그인 페이지로 이동');
+      if (mounted) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) {
+            Navigator.pushReplacementNamed(context, '/login');
+          }
+        });
+      }
+      setState(() => _isLoading = false);
       return;
     }
 

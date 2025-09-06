@@ -126,20 +126,86 @@ class RootApp extends StatelessWidget {
           navigatorKey: navigatorKey, // ✅ 네비게이터 키 연결
           debugShowCheckedModeBanner: false,
           home: const DormIntroPage(),
-          routes: {
-            '/login': (context) => const LoginPage(),
-            '/home': (context) => const student_home.HomePage(),
-            '/vacation': (context) => const VacationPage(), // ✅ 방학예약
-            '/check': (context) => const AdmitPage(), // 기존 합격자 조회 페이지
-            '/firstin': (context) => const FirstInPage(),
-            '/pm': (context) => const PointHistoryPage(),
-            '/adhome': (context) => admin_home.AdHomePage(key: adHomePageKey),
-            '/dash': (context) => AdDashPage(), // 관리자 대쉬보드
-            '/adas': (context) => AdAsPage(), // AS신청관리
-            '/adovernight': (context) => AdOvernightPage(), // 외박관리
-            '/addinner': (context) => AdDinnerPage(), // 석식관리
-            '/scorecheck': (context) => ScoreCheckPage(), // 상벌점관리
-            '/adout': (context) => AdOutPage(), // 퇴소관리
+          onGenerateRoute: (settings) {
+            print('🔍 라우트 생성: ${settings.name}');
+
+            // URL 파싱
+            final uri = Uri.parse(settings.name ?? '/');
+            final path = uri.path;
+
+            switch (path) {
+              case '/login':
+                return MaterialPageRoute(
+                  builder: (context) => const LoginPage(),
+                  settings: settings,
+                );
+              case '/home':
+                return MaterialPageRoute(
+                  builder: (context) => const student_home.HomePage(),
+                  settings: settings, // 쿼리 파라미터 전달
+                );
+              case '/vacation':
+                return MaterialPageRoute(
+                  builder: (context) => const VacationPage(),
+                  settings: settings,
+                );
+              case '/check':
+                return MaterialPageRoute(
+                  builder: (context) => const AdmitPage(),
+                  settings: settings,
+                );
+              case '/firstin':
+                return MaterialPageRoute(
+                  builder: (context) => const FirstInPage(),
+                  settings: settings,
+                );
+              case '/pm':
+                return MaterialPageRoute(
+                  builder: (context) => const PointHistoryPage(),
+                  settings: settings,
+                );
+              case '/adhome':
+                return MaterialPageRoute(
+                  builder:
+                      (context) => admin_home.AdHomePage(key: adHomePageKey),
+                  settings: settings,
+                );
+              case '/dash':
+                return MaterialPageRoute(
+                  builder: (context) => AdDashPage(),
+                  settings: settings,
+                );
+              case '/adas':
+                return MaterialPageRoute(
+                  builder: (context) => AdAsPage(),
+                  settings: settings,
+                );
+              case '/adovernight':
+                return MaterialPageRoute(
+                  builder: (context) => AdOvernightPage(),
+                  settings: settings,
+                );
+              case '/addinner':
+                return MaterialPageRoute(
+                  builder: (context) => AdDinnerPage(),
+                  settings: settings,
+                );
+              case '/scorecheck':
+                return MaterialPageRoute(
+                  builder: (context) => ScoreCheckPage(),
+                  settings: settings,
+                );
+              case '/adout':
+                return MaterialPageRoute(
+                  builder: (context) => AdOutPage(),
+                  settings: settings,
+                );
+              default:
+                return MaterialPageRoute(
+                  builder: (context) => const DormIntroPage(),
+                  settings: settings,
+                );
+            }
           },
         );
       },

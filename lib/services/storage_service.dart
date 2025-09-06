@@ -35,22 +35,38 @@ class StorageService {
   /// 학생 정보 불러오기 (복호화)
   static Future<Map<String, dynamic>?> getStudentInfo() async {
     await init();
+    print('🔍 StorageService.getStudentInfo 호출됨');
 
     // 세션 유효성 검사
-    if (!await _isSessionValid()) {
+    final sessionValid = await _isSessionValid();
+    print('🔍 세션 유효성: $sessionValid');
+
+    if (!sessionValid) {
+      print('❌ 세션이 만료되어 데이터 삭제');
       await clearAll();
       return null;
     }
 
     final encrypted = _prefs!.getString(_keyStudentInfo);
-    if (encrypted == null) return null;
+    print('🔍 암호화된 데이터 존재 여부: ${encrypted != null}');
+
+    if (encrypted == null) {
+      print('❌ 저장된 학생 정보가 없음');
+      return null;
+    }
 
     try {
       final decrypted = _decrypt(encrypted);
       await _updateLastActivity();
-      return json.decode(decrypted) as Map<String, dynamic>;
+      final studentInfo = json.decode(decrypted) as Map<String, dynamic>;
+      print(
+        '✅ 학생 정보 복호화 성공: ${studentInfo['name']} (${studentInfo['student_id']})',
+      );
+      return studentInfo;
     } catch (e) {
-      print('학생 정보 복호화 실패: $e');
+      print('❌ 학생 정보 복호화 실패: $e - 기존 데이터 삭제 후 재시도 필요');
+      // 복호화 실패 시 기존 잘못된 데이터 삭제
+      await _prefs!.remove(_keyStudentInfo);
       return null;
     }
   }
@@ -72,6 +88,14 @@ class StorageService {
   /// 학생 페이지 인덱스 저장
   static Future<void> saveStudentPageIndex(int index) async {
     await init();
+
+    // 🚨 A/S 페이지(인덱스 6) 저장 방지 - 의도하지 않은 이동 방지
+    if (index == 6) {
+      print('⚠️ AS 페이지(6) 인덱스 저장 차단 - 내기숙사(0)로 변경');
+      index = 0; // 내기숙사로 강제 변경
+    }
+
+    print('💾 학생 페이지 인덱스 저장: $index');
     await _prefs!.setInt(_keyStudentPageIndex, index);
     await _updateLastActivity();
   }
@@ -79,8 +103,22 @@ class StorageService {
   /// 학생 페이지 인덱스 불러오기
   static Future<int> getStudentPageIndex() async {
     await init();
-    if (!await _isSessionValid()) return 2; // 홈 페이지 기본값
-    return _prefs!.getInt(_keyStudentPageIndex) ?? 2;
+    if (!await _isSessionValid()) {
+      print('⚠️ 세션이 만료되어 기본 페이지 인덱스 반환: 0');
+      return 0; // 내기숙사 기본값
+    }
+
+    final index = _prefs!.getInt(_keyStudentPageIndex) ?? 0;
+
+    // 🚨 A/S 페이지(인덱스 6) 로드 방지 - 기존에 잘못 저장된 값 정리
+    if (index == 6) {
+      print('⚠️ 저장된 AS 페이지(6) 인덱스 감지 - 내기숙사(0)로 변경');
+      await saveStudentPageIndex(0); // 올바른 값으로 재저장
+      return 0;
+    }
+
+    print('📖 학생 페이지 인덱스 로드: $index');
+    return index;
   }
 
   /// 로그인 상태 확인
@@ -103,13 +141,24 @@ class StorageService {
   static Future<bool> _isSessionValid() async {
     await init();
     final lastActivity = _prefs!.getInt(_keyLastActivity);
-    if (lastActivity == null) return false;
+    print('🔍 마지막 활동 시간: $lastActivity');
+
+    if (lastActivity == null) {
+      print('❌ 마지막 활동 시간이 없음 - 세션 무효');
+      return false;
+    }
 
     final now = DateTime.now().millisecondsSinceEpoch;
     final difference = now - lastActivity;
     final minutes = difference / (1000 * 60);
+    final remainingMinutes = (_sessionTimeoutMinutes - minutes).round();
 
-    return minutes < _sessionTimeoutMinutes;
+    print('🔍 세션 경과 시간: ${minutes.round()}분, 남은 시간: ${remainingMinutes}분');
+
+    final isValid = minutes < _sessionTimeoutMinutes;
+    print('🔍 세션 유효성 결과: $isValid');
+
+    return isValid;
   }
 
   /// 모든 저장된 데이터 삭제
@@ -127,11 +176,17 @@ class StorageService {
     await _prefs!.setBool(_keyIsLoggedIn, false);
   }
 
+  /// 고정된 키 생성
+  static String _getFixedKey() {
+    const fixedSeed = 'kbu_domi_storage_key_2025'; // 고정된 시드
+    final digest = sha256.convert(utf8.encode(fixedSeed));
+    return digest.toString().substring(0, 16);
+  }
+
   /// 간단한 암호화 (실제 운영환경에서는 더 강력한 암호화 사용 권장)
   static String _encrypt(String text) {
     final bytes = utf8.encode(text);
-    final digest = sha256.convert(bytes);
-    final key = digest.toString().substring(0, 16);
+    final key = _getFixedKey(); // 고정된 키 사용
 
     // 간단한 XOR 암호화 (실제로는 AES 등 사용 권장)
     final encrypted = <int>[];
@@ -145,9 +200,7 @@ class StorageService {
   /// 복호화
   static String _decrypt(String encryptedText) {
     final encrypted = base64.decode(encryptedText);
-    final tempBytes = utf8.encode('temp'); // 실제로는 고정된 키 사용
-    final digest = sha256.convert(tempBytes);
-    final key = digest.toString().substring(0, 16);
+    final key = _getFixedKey(); // 동일한 고정된 키 사용
 
     final decrypted = <int>[];
     for (int i = 0; i < encrypted.length; i++) {

@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'package:flutter_screenutil/flutter_screenutil.dart'; // ✅ 반응형
 import 'package:provider/provider.dart';
 import '../student_provider.dart';
+import '../services/storage_service.dart'; // 🚨 StorageService import 추가
 import 'package:kbu_domi/app/env_app.dart';
 
 class AppColors {
@@ -82,12 +83,24 @@ class _AppLoginState extends State<AppLogin> {
         if (response.statusCode == 200) {
           final data = json.decode(response.body);
           if (data['success']) {
+            // 🚨 관리자 계정 체크 - 학생용 앱에서는 관리자 로그인 차단
+            if (data['is_admin'] == true) {
+              _showErrorDialog('관리자 계정은 학생용 앱에서 로그인할 수 없습니다.');
+              return;
+            }
+
             // StudentProvider에 학생 정보 저장
             final studentProvider = Provider.of<StudentProvider>(
               context,
               listen: false,
             );
-            studentProvider.setStudentInfo(data['user']);
+            studentProvider.setStudentInfo(
+              data['user'],
+            ); // 🚨 await 제거 (void 함수)
+
+            // 로그인 성공 시 홈 페이지로 초기화
+            await StorageService.saveStudentPageIndex(2);
+            print('✅ 로그인 성공 - 홈 페이지로 초기화');
 
             Navigator.pushReplacementNamed(context, '/home');
           } else {

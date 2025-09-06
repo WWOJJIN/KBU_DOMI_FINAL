@@ -63,15 +63,26 @@ class _LoginPageState extends State<LoginPage> {
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
         if (data['success']) {
+          // 🚨 관리자 계정 체크 - 웹 학생 포털에서는 관리자 로그인 허용하지만 적절한 페이지로 이동
+          bool isAdmin = data['is_admin'] ?? false;
+
           final studentProvider = Provider.of<StudentProvider>(
             context,
             listen: false,
           );
-          studentProvider.setStudentInfo(data['user']);
-          bool isAdmin = data['is_admin'] ?? false;
+
+          // 학생 정보만 StudentProvider에 저장 (관리자는 저장하지 않음)
+          if (!isAdmin) {
+            studentProvider.setStudentInfo(data['user']);
+          }
+
           if (mounted) {
             // redirectTo에 따른 페이지 이동
             if (widget.redirectTo == 'application') {
+              if (isAdmin) {
+                _showError('관리자 계정은 입주신청을 할 수 없습니다.');
+                return;
+              }
               Navigator.pushReplacementNamed(
                 context,
                 '/firstin',

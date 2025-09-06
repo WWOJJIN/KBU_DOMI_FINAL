@@ -80,9 +80,13 @@ class _AppPmState extends State<AppPm> {
     final studentId = studentProvider.studentId;
 
     if (studentId == null) {
-      print('❌ 학생 ID가 없습니다. 로그인 페이지로 이동합니다.');
+      print('❌ app_pm - 학생 ID가 없습니다. 로그인 페이지로 이동합니다.');
       if (mounted) {
-        Navigator.pushReplacementNamed(context, '/login');
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) {
+            Navigator.pushReplacementNamed(context, '/login');
+          }
+        });
       }
       return;
     }

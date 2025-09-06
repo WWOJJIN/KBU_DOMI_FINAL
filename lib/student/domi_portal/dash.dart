@@ -80,9 +80,33 @@ class _DashPageState extends State<DashPage> {
       print('  - provider.studentId: $studentIdFromProvider');
       print('  - targetId: $targetId');
       print('  - provider.name: ${studentProvider.name}');
+      print('  - provider.roommate: ${studentProvider.roommate}');
 
       if (targetId != null) {
         _fetchAllData(targetId);
+
+        // 🔧 추가 안전 장치: 2초 후에 룸메이트 정보가 없으면 다시 시도
+        Future.delayed(const Duration(seconds: 2), () {
+          if (mounted) {
+            try {
+              final currentProvider = Provider.of<StudentProvider>(
+                context,
+                listen: false,
+              );
+              if (currentProvider.roommate == null ||
+                  currentProvider.roommate == 'null' ||
+                  currentProvider.roommate == '' ||
+                  currentProvider.roommate == '데이터 없음') {
+                print('🔄 2초 후 룸메이트 정보 재확인 - 다시 시도');
+                _fetchAllData(targetId);
+              } else {
+                print('✅ 2초 후 확인 - 룸메이트 정보 정상: ${currentProvider.roommate}');
+              }
+            } catch (e) {
+              print('❌ 2초 후 룸메이트 정보 확인 중 오류: $e');
+            }
+          }
+        });
       } else {
         print('❌ 웹 대시보드 - targetId가 null입니다!');
         if (mounted) {
@@ -784,24 +808,95 @@ class _DashPageState extends State<DashPage> {
               color: AppColors.textSecondary,
             ),
             const SizedBox(width: 10),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  student.roommate ?? '데이터 없음',
-                  style: const TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w600,
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    student.roommate ?? '데이터 없음',
+                    style: const TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
-                ),
-                Text(
-                  student.roommateDept ?? '학과 정보 없음',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: AppColors.textSecondary,
+                  Text(
+                    student.roommateDept ?? '학과 정보 없음',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: AppColors.textSecondary,
+                    ),
                   ),
-                ),
-              ],
+                  // 🔍 임시 디버그 정보
+                  if (student.roommate == null || student.roommate == '데이터 없음')
+                    Container(
+                      margin: const EdgeInsets.only(top: 8),
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: Colors.red.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(4),
+                        border: Border.all(color: Colors.red.withOpacity(0.3)),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            '🔍 디버그 정보:',
+                            style: TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.red,
+                            ),
+                          ),
+                          Text(
+                            'StudentID: ${student.studentId}',
+                            style: TextStyle(fontSize: 9, color: Colors.red),
+                          ),
+                          Text(
+                            'Roommate: "${student.roommate}"',
+                            style: TextStyle(fontSize: 9, color: Colors.red),
+                          ),
+                          Text(
+                            'RoommateDept: "${student.roommateDept}"',
+                            style: TextStyle(fontSize: 9, color: Colors.red),
+                          ),
+                          ElevatedButton(
+                            onPressed: () async {
+                              if (student.studentId != null) {
+                                print('🔄 수동 룸메이트 정보 새로고침 시도');
+                                // StudentProvider의 _fetchRoommateFromRequests 메서드를 직접 호출할 수 없으므로
+                                // setStudentInfo를 다시 호출해서 룸메이트 조회 로직 실행
+                                final response = await http.get(
+                                  Uri.parse(
+                                    '$apiBase/api/student/${student.studentId}',
+                                  ),
+                                );
+                                if (response.statusCode == 200) {
+                                  final data = json.decode(response.body);
+                                  student.setStudentInfo(data);
+                                }
+                              }
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.red,
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 4,
+                              ),
+                              minimumSize: Size.zero,
+                            ),
+                            child: Text(
+                              '수동 새로고침',
+                              style: TextStyle(
+                                fontSize: 8,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                ],
+              ),
             ),
           ],
         ),
@@ -1067,9 +1162,12 @@ class _DashPageState extends State<DashPage> {
                 size: 24,
               ),
               const SizedBox(width: 12),
-              const Text(
-                "상/벌점 현황",
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20),
+              Expanded(
+                child: Text(
+                  "상/벌점 현황",
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20),
+                  overflow: TextOverflow.ellipsis,
+                ),
               ),
             ],
           ),
@@ -1113,15 +1211,17 @@ class _DashPageState extends State<DashPage> {
           children: [
             Icon(icon, color: color, size: 20),
             const SizedBox(width: 12),
-            Text(
-              title,
-              style: TextStyle(
-                color: AppColors.textSecondary,
-                fontSize: 14,
-                fontWeight: FontWeight.w500,
+            Expanded(
+              child: Text(
+                title,
+                style: TextStyle(
+                  color: AppColors.textSecondary,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                ),
+                overflow: TextOverflow.ellipsis,
               ),
             ),
-            const Spacer(),
             Text(
               value,
               style: TextStyle(
