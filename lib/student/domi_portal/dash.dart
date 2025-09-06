@@ -826,75 +826,7 @@ class _DashPageState extends State<DashPage> {
                       color: AppColors.textSecondary,
                     ),
                   ),
-                  // 🔍 임시 디버그 정보
-                  if (student.roommate == null || student.roommate == '데이터 없음')
-                    Container(
-                      margin: const EdgeInsets.only(top: 8),
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: Colors.red.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(4),
-                        border: Border.all(color: Colors.red.withOpacity(0.3)),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            '🔍 디버그 정보:',
-                            style: TextStyle(
-                              fontSize: 10,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.red,
-                            ),
-                          ),
-                          Text(
-                            'StudentID: ${student.studentId}',
-                            style: TextStyle(fontSize: 9, color: Colors.red),
-                          ),
-                          Text(
-                            'Roommate: "${student.roommate}"',
-                            style: TextStyle(fontSize: 9, color: Colors.red),
-                          ),
-                          Text(
-                            'RoommateDept: "${student.roommateDept}"',
-                            style: TextStyle(fontSize: 9, color: Colors.red),
-                          ),
-                          ElevatedButton(
-                            onPressed: () async {
-                              if (student.studentId != null) {
-                                print('🔄 수동 룸메이트 정보 새로고침 시도');
-                                // StudentProvider의 _fetchRoommateFromRequests 메서드를 직접 호출할 수 없으므로
-                                // setStudentInfo를 다시 호출해서 룸메이트 조회 로직 실행
-                                final response = await http.get(
-                                  Uri.parse(
-                                    '$apiBase/api/student/${student.studentId}',
-                                  ),
-                                );
-                                if (response.statusCode == 200) {
-                                  final data = json.decode(response.body);
-                                  student.setStudentInfo(data);
-                                }
-                              }
-                            },
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.red,
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 8,
-                                vertical: 4,
-                              ),
-                              minimumSize: Size.zero,
-                            ),
-                            child: Text(
-                              '수동 새로고침',
-                              style: TextStyle(
-                                fontSize: 8,
-                                color: Colors.white,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
+                  // 🚨 디버그 정보 제거 - 사용자에게 노출되지 않도록 주석 처리
                 ],
               ),
             ),

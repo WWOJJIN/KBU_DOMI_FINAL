@@ -732,7 +732,7 @@ class _FirstInPageState extends State<FirstInPage> {
               (v) => setState(() => _selectedGender = v!),
               hasError: _genderError,
             ),
-            const Spacer(),
+            const SizedBox(), // 🚨 Spacer() 제거하고 빈 SizedBox()로 교체
           ]),
           _buildSectionTitle('기본 인적사항'),
           _buildDropdown(
