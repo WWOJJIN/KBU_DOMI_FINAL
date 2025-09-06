@@ -12,6 +12,7 @@ import 'package:kbu_domi/app/app_setting.dart';
 import 'package:kbu_domi/app/app_overnight.dart';
 import 'package:kbu_domi/student_provider.dart';
 import 'package:kbu_domi/services/storage_service.dart';
+import 'package:kbu_domi/env.dart';
 
 void main() {
   runApp(const RootApp());
@@ -646,7 +647,7 @@ class _HomeShellState extends State<HomeShell> {
 
       final response = await http.get(
         Uri.parse(
-          'http://localhost:5050/api/student/notifications?student_id=$actualStudentId',
+          '$apiBase/api/student/notifications?student_id=$actualStudentId',
         ),
         headers: {'Content-Type': 'application/json'},
       );

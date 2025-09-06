@@ -4,6 +4,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'dart:html' as html; // ⭐️ Flutter Web에서 팝업, postMessage
 import 'dart:convert';
 import 'package:http/http.dart' as http; // ⭐️ API 호출을 위해 추가
+import 'package:kbu_domi/env.dart';
 
 // 페이지 이동을 위해 import 추가
 import 'first.dart';
@@ -461,7 +462,7 @@ class _FirstInPageState extends State<FirstInPage> {
       // API 호출
       print('🚀 입주신청 API 호출 시작 - studentId: ${_studentIdController.text}');
       final response = await http.post(
-        Uri.parse('http://localhost:5050/api/firstin/apply'),
+        Uri.parse('$apiBase/api/firstin/apply'),
         headers: {'Content-Type': 'application/json'},
         body: json.encode(requestData),
       );

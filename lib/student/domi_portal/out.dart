@@ -15,6 +15,7 @@ import 'package:http_parser/http_parser.dart';
 import 'package:syncfusion_flutter_datagrid/datagrid.dart';
 import 'package:dropdown_button2/dropdown_button2.dart';
 import 'package:table_calendar/table_calendar.dart';
+import 'package:kbu_domi/env.dart';
 
 class CheckoutApplyPage extends StatefulWidget {
   const CheckoutApplyPage({super.key});
@@ -115,9 +116,7 @@ class _CheckoutApplyPageState extends State<CheckoutApplyPage> {
     final studentId = studentIdController.text;
     try {
       final response = await http.get(
-        Uri.parse(
-          'http://localhost:5050/api/student/info?student_id=$studentId',
-        ),
+        Uri.parse('$apiBase/api/student/info?student_id=$studentId'),
       );
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
@@ -140,7 +139,7 @@ class _CheckoutApplyPageState extends State<CheckoutApplyPage> {
   Future<void> _loadNotice() async {
     try {
       final response = await http.get(
-        Uri.parse('http://localhost:5050/api/notice?category=checkout'),
+        Uri.parse('$apiBase/api/notice?category=checkout'),
       );
 
       if (response.statusCode == 200) {
@@ -163,9 +162,7 @@ class _CheckoutApplyPageState extends State<CheckoutApplyPage> {
     final studentId = studentIdController.text;
     try {
       final response = await http.get(
-        Uri.parse(
-          'http://localhost:5050/api/checkout/requests?student_id=$studentId',
-        ),
+        Uri.parse('$apiBase/api/checkout/requests?student_id=$studentId'),
       );
       print('퇴소신청 내역 API 응답: \\n${response.body}'); // 디버깅용
       if (response.statusCode == 200) {
@@ -604,7 +601,7 @@ class _CheckoutApplyPageState extends State<CheckoutApplyPage> {
       // API 호출로 실제 데이터에서 checkout_id 찾기
       final response = await http.get(
         Uri.parse(
-          'http://localhost:5050/api/checkout/requests?student_id=${studentIdController.text}',
+          '$apiBase/api/checkout/requests?student_id=${studentIdController.text}',
         ),
       );
 
@@ -627,7 +624,7 @@ class _CheckoutApplyPageState extends State<CheckoutApplyPage> {
 
       // 서버에서 삭제
       final deleteResponse = await http.delete(
-        Uri.parse('http://localhost:5050/api/checkout/$checkoutId'),
+        Uri.parse('$apiBase/api/checkout/$checkoutId'),
       );
 
       if (deleteResponse.statusCode == 200) {
@@ -672,7 +669,7 @@ class _CheckoutApplyPageState extends State<CheckoutApplyPage> {
   }
 
   Future<void> _submitCheckoutRequest() async {
-    final url = Uri.parse('http://localhost:5050/api/checkout/apply');
+    final url = Uri.parse('$apiBase/api/checkout/apply');
     final data = {
       'studentId': studentIdController.text,
       'name': nameController.text,
@@ -783,7 +780,7 @@ class _CheckoutApplyPageState extends State<CheckoutApplyPage> {
         });
       }
       final dio = Dio();
-      dio.options.baseUrl = 'http://localhost:5050';
+      dio.options.baseUrl = '$apiBase';
       dio.options.connectTimeout = const Duration(seconds: 120);
       dio.options.receiveTimeout = const Duration(seconds: 120);
       final response = await dio.post(

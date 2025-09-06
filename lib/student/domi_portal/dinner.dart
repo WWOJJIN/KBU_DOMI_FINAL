@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:syncfusion_flutter_datagrid/datagrid.dart';
+import 'package:kbu_domi/env.dart';
 
 class DinnerRequestPage extends StatefulWidget {
   final VoidCallback? onDinnerUpdated; // 석식 신청 업데이트 콜백
@@ -173,9 +174,7 @@ class _DinnerRequestPageState extends State<DinnerRequestPage> {
       return;
     }
 
-    final url = Uri.parse(
-      'http://localhost:5050/api/dinner/requests?student_id=$studentId',
-    );
+    final url = Uri.parse('$apiBase/api/dinner/requests?student_id=$studentId');
     print('🔍 웹 석식신청 - 요청 URL: $url');
     try {
       print('🔍 웹 석식신청 - API 요청 시도');
@@ -209,9 +208,7 @@ class _DinnerRequestPageState extends State<DinnerRequestPage> {
 
   Future<void> _fetchPaymentHistory(int dinnerId) async {
     print('_fetchPaymentHistory 시작 - dinnerId: $dinnerId');
-    final url = Uri.parse(
-      'http://localhost:5050/api/dinner/payments?dinner_id=$dinnerId',
-    );
+    final url = Uri.parse('$apiBase/api/dinner/payments?dinner_id=$dinnerId');
     try {
       final response = await http.get(url);
       print('결제 내역 API 응답: ${response.statusCode}');
@@ -254,9 +251,7 @@ class _DinnerRequestPageState extends State<DinnerRequestPage> {
       return;
     }
 
-    final url = Uri.parse(
-      'http://localhost:5050/api/dinner/payments?student_id=$studentId',
-    );
+    final url = Uri.parse('$apiBase/api/dinner/payments?student_id=$studentId');
     print('결제 내역 조회 URL: $url');
 
     try {
@@ -361,7 +356,7 @@ class _DinnerRequestPageState extends State<DinnerRequestPage> {
   Future<void> _loadNotice() async {
     try {
       final response = await http.get(
-        Uri.parse('http://localhost:5050/api/notice?category=dinner'),
+        Uri.parse('$apiBase/api/notice?category=dinner'),
       );
       print('공지사항 API 응답: ${response.statusCode} - ${response.body}');
 
@@ -387,7 +382,7 @@ class _DinnerRequestPageState extends State<DinnerRequestPage> {
   Future<void> _loadPeriodInfo() async {
     try {
       final response = await http.get(
-        Uri.parse('http://localhost:5050/api/admin/dinner/period-info'),
+        Uri.parse('$apiBase/api/admin/dinner/period-info'),
       );
       print('석식 기간 정보 API 응답: ${response.statusCode} - ${response.body}');
 
@@ -408,7 +403,7 @@ class _DinnerRequestPageState extends State<DinnerRequestPage> {
   }
 
   Future<void> _applyDinner(String year, String semester, String month) async {
-    final url = Uri.parse('http://localhost:5050/api/dinner/apply');
+    final url = Uri.parse('$apiBase/api/dinner/apply');
     final mealDays = _calculateMealDays(month);
     final amount = mealDays * 4500;
 
@@ -463,7 +458,7 @@ class _DinnerRequestPageState extends State<DinnerRequestPage> {
   }
 
   Future<void> _payDinner(int dinnerId, int amount, {String? note}) async {
-    final url = Uri.parse('http://localhost:5050/api/dinner/payment');
+    final url = Uri.parse('$apiBase/api/dinner/payment');
     final data = {
       'dinner_id': dinnerId,
       'pay_type': '결제',
@@ -488,7 +483,7 @@ class _DinnerRequestPageState extends State<DinnerRequestPage> {
   }
 
   Future<void> _refundDinner(int dinnerId, int amount, {String? note}) async {
-    final url = Uri.parse('http://localhost:5050/api/dinner/payment');
+    final url = Uri.parse('$apiBase/api/dinner/payment');
     final data = {
       'dinner_id': dinnerId,
       'pay_type': '환불',

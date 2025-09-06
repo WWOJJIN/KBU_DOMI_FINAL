@@ -4,6 +4,7 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:provider/provider.dart';
 import '../../student_provider.dart';
+import 'package:kbu_domi/env.dart';
 
 class RoommatePage extends StatefulWidget {
   const RoommatePage({super.key});
@@ -61,10 +62,10 @@ class _RoommatePageState extends State<RoommatePage> {
       }
 
       final myReqUrl = Uri.parse(
-        'http://localhost:5050/api/roommate/my-requests?student_id=$studentId',
+        '$apiBase/api/roommate/my-requests?student_id=$studentId',
       );
       final reqMeUrl = Uri.parse(
-        'http://localhost:5050/api/roommate/requests-for-me?student_id=$studentId',
+        '$apiBase/api/roommate/requests-for-me?student_id=$studentId',
       );
 
       print('🔍 웹 룸메이트 - 내 신청 API 호출: $myReqUrl');
@@ -154,7 +155,7 @@ class _RoommatePageState extends State<RoommatePage> {
   Future<void> _loadNotice() async {
     try {
       final response = await http.get(
-        Uri.parse('http://localhost:5050/api/notice?category=roommate'),
+        Uri.parse('$apiBase/api/notice?category=roommate'),
       );
       if (response.statusCode == 200) {
         final Map<String, dynamic> data = json.decode(response.body);
@@ -214,7 +215,7 @@ class _RoommatePageState extends State<RoommatePage> {
     try {
       print('🔍 웹 룸메이트 - API 호출 시도');
       final response = await http.post(
-        Uri.parse('http://localhost:5050/api/roommate/apply'),
+        Uri.parse('$apiBase/api/roommate/apply'),
         headers: {'Content-Type': 'application/json'},
         body: json.encode(data),
       );
@@ -695,7 +696,7 @@ class _RoommatePageState extends State<RoommatePage> {
   Future<void> _cancelRequest(int requestId) async {
     try {
       final response = await http.delete(
-        Uri.parse('http://localhost:5050/api/roommate/requests/$requestId'),
+        Uri.parse('$apiBase/api/roommate/requests/$requestId'),
       );
 
       if (response.statusCode == 200) {
@@ -728,9 +729,7 @@ class _RoommatePageState extends State<RoommatePage> {
   Future<void> _acceptRequest(int requestId) async {
     try {
       final response = await http.put(
-        Uri.parse(
-          'http://localhost:5050/api/roommate/requests/$requestId/accept',
-        ),
+        Uri.parse('$apiBase/api/roommate/requests/$requestId/accept'),
       );
 
       if (response.statusCode == 200) {
@@ -766,9 +765,7 @@ class _RoommatePageState extends State<RoommatePage> {
   Future<void> _rejectRequest(int requestId) async {
     try {
       final response = await http.put(
-        Uri.parse(
-          'http://localhost:5050/api/roommate/requests/$requestId/reject',
-        ),
+        Uri.parse('$apiBase/api/roommate/requests/$requestId/reject'),
       );
 
       if (response.statusCode == 200) {

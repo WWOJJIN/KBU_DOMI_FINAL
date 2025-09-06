@@ -5,6 +5,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'dart:math';
+import 'package:kbu_domi/env.dart';
 
 // --- 디자인에 사용될 색상 정의 ---
 class AppColors {
@@ -81,7 +82,7 @@ class _AdApplicationPageState extends State<AdApplicationPage>
     });
     try {
       final response = await http.get(
-        Uri.parse('http://localhost:5050/api/admin/firstin/applications'),
+        Uri.parse('$apiBase/api/admin/firstin/applications'),
       );
       if (response.statusCode == 200) {
         final List<dynamic> data = json.decode(utf8.decode(response.bodyBytes));
@@ -105,7 +106,7 @@ class _AdApplicationPageState extends State<AdApplicationPage>
     setState(() => _isCalculatingDistance = true);
     try {
       final response = await http.post(
-        Uri.parse('http://localhost:5050/api/admin/firstin/distance-calculate'),
+        Uri.parse('$apiBase/api/admin/firstin/distance-calculate'),
         headers: {'Content-Type': 'application/json'},
       );
       if (response.statusCode == 200) {
@@ -165,9 +166,7 @@ class _AdApplicationPageState extends State<AdApplicationPage>
 
     try {
       final response = await http.put(
-        Uri.parse(
-          'http://localhost:5050/api/admin/firstin/application/$originalId',
-        ),
+        Uri.parse('$apiBase/api/admin/firstin/application/$originalId'),
         headers: {'Content-Type': 'application/json'},
         body: json.encode({
           'status': '승인',
@@ -214,9 +213,7 @@ class _AdApplicationPageState extends State<AdApplicationPage>
 
     try {
       final response = await http.put(
-        Uri.parse(
-          'http://localhost:5050/api/admin/firstin/application/$originalId',
-        ),
+        Uri.parse('$apiBase/api/admin/firstin/application/$originalId'),
         headers: {'Content-Type': 'application/json'},
         body: json.encode({
           'status': '신청',
@@ -254,9 +251,7 @@ class _AdApplicationPageState extends State<AdApplicationPage>
 
     try {
       final response = await http.put(
-        Uri.parse(
-          'http://localhost:5050/api/admin/firstin/application/$originalId',
-        ),
+        Uri.parse('$apiBase/api/admin/firstin/application/$originalId'),
         headers: {'Content-Type': 'application/json'},
         body: json.encode({'admin_memo': _adminMemoController.text}),
       );

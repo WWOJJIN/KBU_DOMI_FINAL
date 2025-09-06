@@ -16,6 +16,7 @@ import 'dart:developer';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:dropdown_button2/dropdown_button2.dart';
+import 'package:kbu_domi/env.dart';
 
 class InPage extends StatefulWidget {
   const InPage({super.key});
@@ -128,7 +129,7 @@ class _InPageState extends State<InPage> {
       try {
         // 학생 상세 정보 API 호출
         final response = await http.get(
-          Uri.parse('http://localhost:5050/api/student/${student.studentId}'),
+          Uri.parse('$apiBase/api/student/${student.studentId}'),
         );
 
         if (response.statusCode == 200) {
@@ -271,7 +272,7 @@ class _InPageState extends State<InPage> {
     try {
       final response = await http.get(
         Uri.parse(
-          'http://localhost:5050/api/firstin/my-applications?student_id=${student.studentId}',
+          '$apiBase/api/firstin/my-applications?student_id=${student.studentId}',
         ),
       );
 
@@ -478,7 +479,7 @@ class _InPageState extends State<InPage> {
   Future<void> _loadNotice() async {
     try {
       final response = await http.get(
-        Uri.parse('http://localhost:5050/api/notice?category=checkin'),
+        Uri.parse('$apiBase/api/notice?category=checkin'),
       );
       if (response.statusCode == 200) {
         final Map<String, dynamic> data = json.decode(response.body);
@@ -499,7 +500,7 @@ class _InPageState extends State<InPage> {
     try {
       final response = await http.get(
         Uri.parse(
-          'http://localhost:5050/api/checkin/requests?student_id=${student.studentId}',
+          '$apiBase/api/checkin/requests?student_id=${student.studentId}',
         ),
       );
 
@@ -859,7 +860,7 @@ class _InPageState extends State<InPage> {
         print('기존 신청 업데이트 API 호출 중...');
         final existingId = _existingApplication!['checkin_id'];
         response = await http.put(
-          Uri.parse('http://localhost:5050/api/checkin/update/$existingId'),
+          Uri.parse('$apiBase/api/checkin/update/$existingId'),
           headers: {'Content-Type': 'application/json'},
           body: jsonEncode(applicationData),
         );
@@ -869,7 +870,7 @@ class _InPageState extends State<InPage> {
         // 새 신청: 새로운 신청 생성
         print('새 입실신청 API 호출 중...');
         response = await http.post(
-          Uri.parse('http://localhost:5050/api/checkin/apply'),
+          Uri.parse('$apiBase/api/checkin/apply'),
           headers: {'Content-Type': 'application/json'},
           body: jsonEncode(applicationData),
         );
@@ -960,7 +961,7 @@ class _InPageState extends State<InPage> {
     try {
       var request = http.MultipartRequest(
         'POST',
-        Uri.parse('http://localhost:5050/api/checkin/upload'),
+        Uri.parse('$apiBase/api/checkin/upload'),
       );
 
       request.fields['checkin_id'] = checkinId.toString();

@@ -5,6 +5,7 @@ import 'package:http/http.dart' as http;
 import 'package:geolocator/geolocator.dart';
 import 'dart:convert';
 import '../../student_provider.dart'; // Assuming this path is correct
+import 'package:kbu_domi/env.dart';
 
 // 석식 신청 상태를 관리하기 위한 열거형(enum) 정의
 enum DinnerApplicationStatus {
@@ -133,7 +134,7 @@ class _DashPageState extends State<DashPage> {
 
       // 서버에 점호 제출
       final response = await http.post(
-        Uri.parse('http://localhost:5050/api/rollcall/check'),
+        Uri.parse('$apiBase/api/rollcall/check'),
         headers: {'Content-Type': 'application/json'},
         body: json.encode({
           'student_id': targetId,
@@ -309,15 +310,11 @@ class _DashPageState extends State<DashPage> {
 
       // 상점
       final plusRes = await http.get(
-        Uri.parse(
-          'http://localhost:5050/api/point/history?student_id=$studentId&type=상점',
-        ),
+        Uri.parse('$apiBase/api/point/history?student_id=$studentId&type=상점'),
       );
       // 벌점
       final minusRes = await http.get(
-        Uri.parse(
-          'http://localhost:5050/api/point/history?student_id=$studentId&type=벌점',
-        ),
+        Uri.parse('$apiBase/api/point/history?student_id=$studentId&type=벌점'),
       );
 
       print('🔍 웹 대시보드 - 상점 API 응답: ${plusRes.statusCode}');
@@ -399,7 +396,7 @@ class _DashPageState extends State<DashPage> {
   Future<void> _loadStudentData(String studentId) async {
     try {
       final response = await http.get(
-        Uri.parse('http://localhost:5050/api/student/$studentId'),
+        Uri.parse('$apiBase/api/student/$studentId'),
       );
       if (response.statusCode == 200 && mounted) {
         final data = json.decode(utf8.decode(response.bodyBytes));
@@ -421,9 +418,7 @@ class _DashPageState extends State<DashPage> {
   Future<void> _fetchOutingStatusCount(String studentId) async {
     try {
       final response = await http.get(
-        Uri.parse(
-          'http://localhost:5050/api/overnight_status_count?student_id=$studentId',
-        ),
+        Uri.parse('$apiBase/api/overnight_status_count?student_id=$studentId'),
       );
       if (response.statusCode == 200 && mounted) {
         final data = jsonDecode(response.body);
@@ -443,9 +438,7 @@ class _DashPageState extends State<DashPage> {
   Future<void> _fetchASStatusCount(String studentId) async {
     try {
       final response = await http.get(
-        Uri.parse(
-          'http://localhost:5050/api/as_status_count?student_id=$studentId',
-        ),
+        Uri.parse('$apiBase/api/as_status_count?student_id=$studentId'),
       );
       if (response.statusCode == 200 && mounted) {
         final data = jsonDecode(response.body);
@@ -474,9 +467,7 @@ class _DashPageState extends State<DashPage> {
   Future<void> _fetchDinnerStatus(String studentId) async {
     try {
       final response = await http.get(
-        Uri.parse(
-          'http://localhost:5050/api/dinner/requests?student_id=$studentId',
-        ),
+        Uri.parse('$apiBase/api/dinner/requests?student_id=$studentId'),
       );
 
       print('🔍 대시보드 - 석식 상태 API 응답: ${response.statusCode}');
@@ -512,9 +503,7 @@ class _DashPageState extends State<DashPage> {
         if (nextMonthApplication.isNotEmpty) {
           // 결제 상태 확인을 위해 결제 내역 API 호출
           final paymentResponse = await http.get(
-            Uri.parse(
-              'http://localhost:5050/api/dinner/payments?student_id=$studentId',
-            ),
+            Uri.parse('$apiBase/api/dinner/payments?student_id=$studentId'),
           );
 
           if (paymentResponse.statusCode == 200) {

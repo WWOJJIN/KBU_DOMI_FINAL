@@ -7,6 +7,7 @@ import 'package:uuid/uuid.dart';
 import 'dart:convert';
 import 'package:provider/provider.dart';
 import '../student_provider.dart';
+import 'package:kbu_domi/env.dart';
 //import 'package:kbu_domi/app/app_bar.dart';
 
 // --- 앱 공통 테마 ---
@@ -98,9 +99,7 @@ class _OverNightState extends State<OverNight>
 
     try {
       final response = await http.get(
-        Uri.parse(
-          'http://localhost:5050/api/student/${studentProvider.studentId}',
-        ),
+        Uri.parse('$apiBase/api/student/${studentProvider.studentId}'),
       );
 
       print('🏠 외박 - 학생 정보 API 응답: ${response.statusCode}');
@@ -162,7 +161,7 @@ class _OverNightState extends State<OverNight>
     try {
       final response = await http.get(
         Uri.parse(
-          'http://localhost:5050/api/overnight/student/requests?student_id=${studentProvider.studentId}',
+          '$apiBase/api/overnight/student/requests?student_id=${studentProvider.studentId}',
         ),
       );
 
@@ -228,7 +227,7 @@ class _OverNightState extends State<OverNight>
 
     try {
       final response = await http.post(
-        Uri.parse('http://localhost:5050/api/overnight/request'),
+        Uri.parse('$apiBase/api/overnight/request'),
         headers: {'Content-Type': 'application/json'},
         body: json.encode({
           'student_id': studentProvider.studentId,
@@ -273,7 +272,7 @@ class _OverNightState extends State<OverNight>
   Future<void> _cancelRequest(String uuid) async {
     try {
       final response = await http.delete(
-        Uri.parse('http://localhost:5050/api/overnight/request/$uuid'),
+        Uri.parse('$apiBase/api/overnight/request/$uuid'),
       );
 
       if (response.statusCode == 200) {

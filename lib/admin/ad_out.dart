@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'package:kbu_domi/env.dart';
 
 // --- 디자인에 사용될 색상 정의 ---
 class AppColors {
@@ -63,7 +64,7 @@ class _AdOutPageState extends State<AdOutPage> {
 
     try {
       final response = await http.get(
-        Uri.parse('http://localhost:5050/api/admin/checkout/requests'),
+        Uri.parse('$apiBase/api/admin/checkout/requests'),
       );
 
       if (response.statusCode == 200) {
@@ -96,9 +97,7 @@ class _AdOutPageState extends State<AdOutPage> {
   Future<void> _updateStatus(int checkoutId, String status) async {
     try {
       final response = await http.put(
-        Uri.parse(
-          'http://localhost:5050/api/admin/checkout/$checkoutId/status',
-        ),
+        Uri.parse('$apiBase/api/admin/checkout/$checkoutId/status'),
         headers: {'Content-Type': 'application/json'},
         body: json.encode({
           'status': status,
@@ -142,7 +141,7 @@ class _AdOutPageState extends State<AdOutPage> {
   Future<void> _saveMemo(int checkoutId) async {
     try {
       final response = await http.put(
-        Uri.parse('http://localhost:5050/api/admin/checkout/$checkoutId/memo'),
+        Uri.parse('$apiBase/api/admin/checkout/$checkoutId/memo'),
         headers: {'Content-Type': 'application/json'},
         body: json.encode({'adminMemo': _adminMemoController.text}),
       );

@@ -4,6 +4,7 @@ import 'first.dart'; // 홈(처음화면)
 import 'domi_portal/in.dart'; // 입실신청
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'package:kbu_domi/env.dart';
 
 class AdmitPage extends StatefulWidget {
   const AdmitPage({super.key});
@@ -654,7 +655,7 @@ class _AdmitPageState extends State<AdmitPage> {
       }
 
       // 1. 먼저 로그인 검증
-      final loginUrl = Uri.parse('http://localhost:5050/api/login');
+      final loginUrl = Uri.parse('$apiBase/api/login');
       final loginResponse = await http.post(
         loginUrl,
         headers: {'Content-Type': 'application/json'},
@@ -678,7 +679,7 @@ class _AdmitPageState extends State<AdmitPage> {
 
       // 2. 로그인 성공 후 입주신청 결과 조회
       final url = Uri.parse(
-        'http://localhost:5050/api/firstin/result?student_id=$loginId&user_type=$loginType&name=${Uri.encodeComponent(name)}',
+        '$apiBase/api/firstin/result?student_id=$loginId&user_type=$loginType&name=${Uri.encodeComponent(name)}',
       );
       final response = await http.get(url);
 

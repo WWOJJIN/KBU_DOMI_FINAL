@@ -6,6 +6,7 @@ import 'dart:convert';
 import 'package:provider/provider.dart';
 import '../../student_provider.dart';
 import 'dart:io'; // HttpDate 사용
+import 'package:kbu_domi/env.dart';
 
 class PointHistoryPage extends StatefulWidget {
   const PointHistoryPage({super.key});
@@ -56,7 +57,9 @@ class _PointHistoryPageState extends State<PointHistoryPage> {
       if (from != null) queryParams['from'] = from;
       if (to != null) queryParams['to'] = to;
 
-      final uri = Uri.http('localhost:5050', '/api/point/history', queryParams);
+      final uri = Uri.parse(
+        '$apiBase/api/point/history',
+      ).replace(queryParameters: queryParams);
       print('🔍 웹 상벌점 - API 호출: $uri');
 
       final response = await http.get(uri);

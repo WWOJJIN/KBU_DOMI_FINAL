@@ -10,6 +10,7 @@ import 'package:provider/provider.dart';
 import '../../student_provider.dart';
 import '../../student/first.dart';
 import '../../student/firstin.dart';
+import 'package:kbu_domi/env.dart';
 
 class LoginPage extends StatefulWidget {
   final String redirectTo; // 'application' 또는 'portal'
@@ -44,7 +45,7 @@ class _LoginPageState extends State<LoginPage> {
     final id = idController.text.trim();
     final pw = pwController.text.trim();
     try {
-      final url = Uri.parse('http://localhost:5050/api/login');
+      final url = Uri.parse('$apiBase/api/login');
       final response = await http.post(
         url,
         headers: {'Content-Type': 'application/json'},

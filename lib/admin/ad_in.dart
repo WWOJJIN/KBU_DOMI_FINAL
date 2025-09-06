@@ -8,6 +8,7 @@ import 'application_data_service.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'ad_home.dart'; // adHomePageKey 사용을 위해 import 추가
+import 'package:kbu_domi/env.dart';
 
 // --- AppColors 클래스 (변경 없음) ---
 class AppColors {
@@ -2468,7 +2469,7 @@ class _AdInPageState extends State<AdInPage>
             fileType.contains('png') ||
             fileType.contains('gif'))) {
       return Image.network(
-        'http://localhost:5050$fileUrl',
+        '$apiBase$fileUrl',
         fit: BoxFit.contain,
         errorBuilder: (context, error, stackTrace) {
           return Center(
@@ -2528,12 +2529,12 @@ class _AdInPageState extends State<AdInPage>
   // 파일 다운로드 함수
   void _downloadFile(String fileUrl) {
     // 웹에서는 새 탭으로 파일 열기
-    // html.window.open('http://localhost:5050$fileUrl', '_blank');
+    // html.window.open('$apiBase$fileUrl', '_blank');
 
     // 임시로 URL을 클립보드에 복사
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text('파일 URL: http://localhost:5050$fileUrl'),
+        content: Text('파일 URL: $apiBase$fileUrl'),
         duration: Duration(seconds: 3),
       ),
     );
@@ -2547,7 +2548,7 @@ class _AdInPageState extends State<AdInPage>
     try {
       final response = await http.put(
         Uri.parse(
-          'http://localhost:5050/api/admin/checkin/document/${studentApp['checkin_id'] ?? studentApp['id']}/verify',
+          '$apiBase/api/admin/checkin/document/${studentApp['checkin_id'] ?? studentApp['id']}/verify',
         ),
         headers: {'Content-Type': 'application/json'},
         body: json.encode({

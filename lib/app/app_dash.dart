@@ -4,6 +4,7 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:provider/provider.dart';
 import '../student_provider.dart';
+import 'package:kbu_domi/env.dart';
 
 // --- 앱 공통 테마 (별도 파일로 분리 권장: app_theme.dart) ---
 class AppColors {
@@ -208,26 +209,20 @@ class _AppDashState extends State<AppDash> {
     try {
       // API 병렬 호출
       final responses = await Future.wait([
-        http.get(Uri.parse('http://localhost:5050/api/student/$studentId')),
+        http.get(Uri.parse('$apiBase/api/student/$studentId')),
         http.get(
           Uri.parse(
-            'http://localhost:5050/api/overnight_status_count?student_id=$studentId',
+            '$apiBase/api/overnight_status_count?student_id=$studentId',
           ),
         ),
         http.get(
-          Uri.parse(
-            'http://localhost:5050/api/as_status_count?student_id=$studentId',
-          ),
+          Uri.parse('$apiBase/api/as_status_count?student_id=$studentId'),
         ),
         http.get(
-          Uri.parse(
-            'http://localhost:5050/api/point/history?student_id=$studentId&type=상점',
-          ),
+          Uri.parse('$apiBase/api/point/history?student_id=$studentId&type=상점'),
         ),
         http.get(
-          Uri.parse(
-            'http://localhost:5050/api/point/history?student_id=$studentId&type=벌점',
-          ),
+          Uri.parse('$apiBase/api/point/history?student_id=$studentId&type=벌점'),
         ),
       ]);
 

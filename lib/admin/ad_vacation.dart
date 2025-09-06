@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'package:kbu_domi/env.dart';
 
 // --- 디자인 개선을 위한 스타일 클래스 ---
 class AppStyles {
@@ -56,7 +57,7 @@ class _AdVacationPageState extends State<AdVacationPage> {
 
   List<Map<String, dynamic>> _allReservations = [];
 
-  static const String baseUrl = 'http://localhost:5050';
+  static const String baseUrl = '$apiBase';
 
   List<Map<String, dynamic>> get _filteredList {
     return _allReservations.where((r) {

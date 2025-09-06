@@ -5,6 +5,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'dart:math' as math;
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'package:kbu_domi/env.dart';
 
 // --- 디자인 통일을 위한 AppColors 클래스 (team 버전과 동일) ---
 class AppColors {
@@ -157,24 +158,28 @@ class _RoommateManagePageState extends State<RoommateManagePage> {
   List<Map<String, dynamic>> get _currentList =>
       _tab == '신청관리' ? _requests : _cumulativeData;
 
-  List<Map<String, dynamic>> get _filteredList => _currentList.where((r) {
-    final displayStatus = r['tempStatus'] ?? r['status'];
-    final statusMatch = _statusFilter == '전체' || displayStatus == _statusFilter;
-    final roomTypeMatch =
-        _roomTypeFilter == '전체' ||
-        (r['partners'] as List).length == (_roomTypeFilter == '2인실' ? 1 : 2);
-    final building = r['partnerName']?.contains('여') == true
-        ? '양덕원'
-        : '숭례원'; // 간단한 성별 구분
-    final buildingMatch =
-        _buildingFilter == '전체' || building == _buildingFilter;
-    final searchMatch =
-        _searchText.isEmpty ||
-        r['applicantId'].toString().contains(_searchText) ||
-        r['applicantName'].toString().contains(_searchText) ||
-        r['partnerName'].toString().contains(_searchText);
-    return statusMatch && roomTypeMatch && buildingMatch && searchMatch;
-  }).toList();
+  List<Map<String, dynamic>> get _filteredList =>
+      _currentList.where((r) {
+        final displayStatus = r['tempStatus'] ?? r['status'];
+        final statusMatch =
+            _statusFilter == '전체' || displayStatus == _statusFilter;
+        final roomTypeMatch =
+            _roomTypeFilter == '전체' ||
+            (r['partners'] as List).length ==
+                (_roomTypeFilter == '2인실' ? 1 : 2);
+        final building =
+            r['partnerName']?.contains('여') == true
+                ? '양덕원'
+                : '숭례원'; // 간단한 성별 구분
+        final buildingMatch =
+            _buildingFilter == '전체' || building == _buildingFilter;
+        final searchMatch =
+            _searchText.isEmpty ||
+            r['applicantId'].toString().contains(_searchText) ||
+            r['applicantName'].toString().contains(_searchText) ||
+            r['partnerName'].toString().contains(_searchText);
+        return statusMatch && roomTypeMatch && buildingMatch && searchMatch;
+      }).toList();
 
   List<String> get _floors =>
       _roomList
@@ -184,12 +189,14 @@ class _RoommateManagePageState extends State<RoommateManagePage> {
           .toList()
         ..sort();
 
-  List<Map<String, dynamic>> get _visibleRooms => _roomList
-      .where(
-        (r) =>
-            r['building'] == _selectedBuilding && r['floor'] == _selectedFloor,
-      )
-      .toList();
+  List<Map<String, dynamic>> get _visibleRooms =>
+      _roomList
+          .where(
+            (r) =>
+                r['building'] == _selectedBuilding &&
+                r['floor'] == _selectedFloor,
+          )
+          .toList();
 
   @override
   void initState() {
@@ -231,22 +238,23 @@ class _RoommateManagePageState extends State<RoommateManagePage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
-      body: _isLoading
-          ? Center(child: CircularProgressIndicator())
-          : Column(
-              children: [
-                _buildHeader(),
-                Expanded(
-                  child: Row(
-                    children: [
-                      Expanded(flex: 3, child: _buildLeftPanel()),
-                      VerticalDivider(width: 1.w, color: AppColors.border),
-                      Expanded(flex: 5, child: _buildRightPanel()),
-                    ],
+      body:
+          _isLoading
+              ? Center(child: CircularProgressIndicator())
+              : Column(
+                children: [
+                  _buildHeader(),
+                  Expanded(
+                    child: Row(
+                      children: [
+                        Expanded(flex: 3, child: _buildLeftPanel()),
+                        VerticalDivider(width: 1.w, color: AppColors.border),
+                        Expanded(flex: 5, child: _buildRightPanel()),
+                      ],
+                    ),
                   ),
-                ),
-              ],
-            ),
+                ],
+              ),
     );
   }
 
@@ -303,19 +311,20 @@ class _RoommateManagePageState extends State<RoommateManagePage> {
   Widget _buildTab(String label) {
     final isActive = _tab == label;
     return GestureDetector(
-      onTap: () => setState(() {
-        _tab = label;
-        _selectedIndex = -1;
-        _isEditing = false;
-        _statusFilter = '전체';
-        _roomTypeFilter = '전체';
-        _buildingFilter = '전체';
-        for (var req in _requests) {
-          req['tempStatus'] = null;
-          req['tempRoom'] = null;
-        }
-        _syncRoomAssignments();
-      }),
+      onTap:
+          () => setState(() {
+            _tab = label;
+            _selectedIndex = -1;
+            _isEditing = false;
+            _statusFilter = '전체';
+            _roomTypeFilter = '전체';
+            _buildingFilter = '전체';
+            for (var req in _requests) {
+              req['tempStatus'] = null;
+              req['tempRoom'] = null;
+            }
+            _syncRoomAssignments();
+          }),
       child: Column(
         children: [
           Text(
@@ -426,9 +435,8 @@ class _RoommateManagePageState extends State<RoommateManagePage> {
 
   Widget _buildFilterAndSearch() {
     // 팀원 스타일: '불가' → '반려'로 변경
-    final statusFilters = _tab == '신청관리'
-        ? ['전체', '대기', '보류', '반려']
-        : ['전체', '배정완료', '반려'];
+    final statusFilters =
+        _tab == '신청관리' ? ['전체', '대기', '보류', '반려'] : ['전체', '배정완료', '반려'];
     // 팀원 스타일: 3인실 옵션 추가
     final roomTypeFilters = ['전체', '2인실', '3인실'];
     final buildingFilters = ['전체', '양덕원', '숭례원'];
@@ -511,29 +519,31 @@ class _RoommateManagePageState extends State<RoommateManagePage> {
             height: 38.h,
             child: ListView(
               scrollDirection: Axis.horizontal,
-              children: options
-                  .map(
-                    (f) => Padding(
-                      padding: EdgeInsets.only(right: 8.w),
-                      child: ChoiceChip(
-                        label: Text(f, style: TextStyle(fontSize: 13.sp)),
-                        selected: selectedValue == f,
-                        onSelected: (_) => onSelected(f),
-                        backgroundColor: Colors.white,
-                        selectedColor: AppColors.primary.withOpacity(0.1),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8.r),
-                          side: BorderSide(
-                            color: selectedValue == f
-                                ? AppColors.primary
-                                : Colors.grey.shade300,
+              children:
+                  options
+                      .map(
+                        (f) => Padding(
+                          padding: EdgeInsets.only(right: 8.w),
+                          child: ChoiceChip(
+                            label: Text(f, style: TextStyle(fontSize: 13.sp)),
+                            selected: selectedValue == f,
+                            onSelected: (_) => onSelected(f),
+                            backgroundColor: Colors.white,
+                            selectedColor: AppColors.primary.withOpacity(0.1),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8.r),
+                              side: BorderSide(
+                                color:
+                                    selectedValue == f
+                                        ? AppColors.primary
+                                        : Colors.grey.shade300,
+                              ),
+                            ),
+                            showCheckmark: false,
                           ),
                         ),
-                        showCheckmark: false,
-                      ),
-                    ),
-                  )
-                  .toList(),
+                      )
+                      .toList(),
             ),
           ),
         ),
@@ -754,9 +764,10 @@ class _RoommateManagePageState extends State<RoommateManagePage> {
 
   Widget _buildStudentInfo(Map<String, dynamic> request) {
     final displayStatus = request['tempStatus'] ?? request['status'];
-    final displayRoom = (request['tempRoom']?.isNotEmpty == true
-        ? request['tempRoom']
-        : request['room']);
+    final displayRoom =
+        (request['tempRoom']?.isNotEmpty == true
+            ? request['tempRoom']
+            : request['room']);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -876,17 +887,18 @@ class _RoommateManagePageState extends State<RoommateManagePage> {
 
     return DropdownButtonFormField<T>(
       value: validValue,
-      items: items
-          .map(
-            (i) => DropdownMenuItem(
-              value: i,
-              child: Text(
-                itemLabel != null ? itemLabel(i) : i.toString(),
-                style: TextStyle(fontSize: 15.sp),
-              ),
-            ),
-          )
-          .toList(),
+      items:
+          items
+              .map(
+                (i) => DropdownMenuItem(
+                  value: i,
+                  child: Text(
+                    itemLabel != null ? itemLabel(i) : i.toString(),
+                    style: TextStyle(fontSize: 15.sp),
+                  ),
+                ),
+              )
+              .toList(),
       onChanged: onChanged,
       isExpanded: true,
       dropdownColor: Colors.white,
@@ -928,12 +940,13 @@ class _RoommateManagePageState extends State<RoommateManagePage> {
     // 팀원 스타일: 선택된 요청의 방 타입 확인
     final selectedRequest =
         _selectedIndex != -1 && _selectedIndex < _filteredList.length
-        ? _filteredList[_selectedIndex]
-        : null;
+            ? _filteredList[_selectedIndex]
+            : null;
 
-    final currentRequestEffectiveRoom = selectedRequest != null
-        ? (selectedRequest['tempRoom'] ?? selectedRequest['room'])
-        : null;
+    final currentRequestEffectiveRoom =
+        selectedRequest != null
+            ? (selectedRequest['tempRoom'] ?? selectedRequest['room'])
+            : null;
 
     if (_visibleRooms.isEmpty)
       return const Center(child: Text('해당 층에 호실이 없습니다.'));
@@ -941,92 +954,96 @@ class _RoommateManagePageState extends State<RoommateManagePage> {
     return Wrap(
       spacing: 8.w,
       runSpacing: 8.h,
-      children: _visibleRooms.map((room) {
-        final assignedCount = (room['assigned'] as List).length;
-        final isFull = assignedCount >= room['capacity'];
-        final isAssignedToThis =
-            currentRequestEffectiveRoom != null &&
-            currentRequestEffectiveRoom ==
-                '${room['building']} ${room['room']}호';
+      children:
+          _visibleRooms.map((room) {
+            final assignedCount = (room['assigned'] as List).length;
+            final isFull = assignedCount >= room['capacity'];
+            final isAssignedToThis =
+                currentRequestEffectiveRoom != null &&
+                currentRequestEffectiveRoom ==
+                    '${room['building']} ${room['room']}호';
 
-        // 팀원 스타일: 동적 그룹 크기 계산
-        int groupSize = 1; // 기본적으로 신청자 1명
-        if (selectedRequest != null) {
-          if (selectedRequest['partners'] != null &&
-              selectedRequest['partners'] is List) {
-            groupSize = 1 + (selectedRequest['partners'] as List).length;
-          } else if (selectedRequest['partnerName'] != null) {
-            groupSize = 2; // 기존 방식 (신청자 + 파트너 1명)
-          }
-        }
+            // 팀원 스타일: 동적 그룹 크기 계산
+            int groupSize = 1; // 기본적으로 신청자 1명
+            if (selectedRequest != null) {
+              if (selectedRequest['partners'] != null &&
+                  selectedRequest['partners'] is List) {
+                groupSize = 1 + (selectedRequest['partners'] as List).length;
+              } else if (selectedRequest['partnerName'] != null) {
+                groupSize = 2; // 기존 방식 (신청자 + 파트너 1명)
+              }
+            }
 
-        final canAssign =
-            !isFull && (room['capacity'] - assignedCount) >= groupSize;
+            final canAssign =
+                !isFull && (room['capacity'] - assignedCount) >= groupSize;
 
-        // 팀원 스타일: 층별 배정 제한
-        bool isAssignableFloor = true;
-        if (selectedRequest != null) {
-          final requestedRoomType = selectedRequest['roomType'] ?? '2인실';
-          isAssignableFloor =
-              (_selectedFloor == '9' && requestedRoomType == '2인실') ||
-              (_selectedFloor == '8' && requestedRoomType == '3인실') ||
-              (_selectedFloor == '7' && requestedRoomType == '2인실') ||
-              (_selectedFloor == '6' && requestedRoomType == '1인실') ||
-              (_selectedFloor == '10'); // 방학이용은 모든 타입 허용
-        }
+            // 팀원 스타일: 층별 배정 제한
+            bool isAssignableFloor = true;
+            if (selectedRequest != null) {
+              final requestedRoomType = selectedRequest['roomType'] ?? '2인실';
+              isAssignableFloor =
+                  (_selectedFloor == '9' && requestedRoomType == '2인실') ||
+                  (_selectedFloor == '8' && requestedRoomType == '3인실') ||
+                  (_selectedFloor == '7' && requestedRoomType == '2인실') ||
+                  (_selectedFloor == '6' && requestedRoomType == '1인실') ||
+                  (_selectedFloor == '10'); // 방학이용은 모든 타입 허용
+            }
 
-        final bool isClickable = isAssignableFloor && canAssign;
+            final bool isClickable = isAssignableFloor && canAssign;
 
-        Color cardColor = Colors.white;
-        Color textColor = AppColors.fontPrimary;
-        BorderSide borderSide = BorderSide(color: AppColors.border);
+            Color cardColor = Colors.white;
+            Color textColor = AppColors.fontPrimary;
+            BorderSide borderSide = BorderSide(color: AppColors.border);
 
-        if (!isAssignableFloor) {
-          cardColor = AppColors.disabledBackground;
-          textColor = AppColors.fontSecondary;
-        } else if (isAssignedToThis) {
-          cardColor = AppColors.statusConfirmed.withOpacity(0.15);
-          borderSide = BorderSide(color: AppColors.statusConfirmed, width: 1.5);
-        } else if (isFull || !canAssign) {
-          cardColor = AppColors.disabledBackground;
-          textColor = AppColors.fontSecondary;
-        }
+            if (!isAssignableFloor) {
+              cardColor = AppColors.disabledBackground;
+              textColor = AppColors.fontSecondary;
+            } else if (isAssignedToThis) {
+              cardColor = AppColors.statusConfirmed.withOpacity(0.15);
+              borderSide = BorderSide(
+                color: AppColors.statusConfirmed,
+                width: 1.5,
+              );
+            } else if (isFull || !canAssign) {
+              cardColor = AppColors.disabledBackground;
+              textColor = AppColors.fontSecondary;
+            }
 
-        return InkWell(
-          onTap: isClickable ? () => _assignRoom(room) : null,
-          borderRadius: BorderRadius.circular(8.r),
-          child: Container(
-            width: 100.w,
-            height: 60.h,
-            decoration: BoxDecoration(
-              color: cardColor,
-              border: Border.fromBorderSide(borderSide),
+            return InkWell(
+              onTap: isClickable ? () => _assignRoom(room) : null,
               borderRadius: BorderRadius.circular(8.r),
-            ),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(
-                  '${room['room']}호',
-                  style: TextStyle(
-                    fontSize: 16.sp,
-                    fontWeight: FontWeight.bold,
-                    color: textColor,
-                  ),
+              child: Container(
+                width: 100.w,
+                height: 60.h,
+                decoration: BoxDecoration(
+                  color: cardColor,
+                  border: Border.fromBorderSide(borderSide),
+                  borderRadius: BorderRadius.circular(8.r),
                 ),
-                SizedBox(height: 2.h),
-                Text(
-                  '(${assignedCount}/${room['capacity']})',
-                  style: TextStyle(
-                    color: textColor.withOpacity(0.8),
-                    fontSize: 14.sp,
-                  ),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      '${room['room']}호',
+                      style: TextStyle(
+                        fontSize: 16.sp,
+                        fontWeight: FontWeight.bold,
+                        color: textColor,
+                      ),
+                    ),
+                    SizedBox(height: 2.h),
+                    Text(
+                      '(${assignedCount}/${room['capacity']})',
+                      style: TextStyle(
+                        color: textColor.withOpacity(0.8),
+                        fontSize: 14.sp,
+                      ),
+                    ),
+                  ],
                 ),
-              ],
-            ),
-          ),
-        );
-      }).toList(),
+              ),
+            );
+          }).toList(),
     );
   }
 
@@ -1147,19 +1164,20 @@ class _RoommateManagePageState extends State<RoommateManagePage> {
             status;
     final Map<String, dynamic>? request =
         _selectedIndex != -1 && _selectedIndex < _filteredList.length
-        ? _filteredList[_selectedIndex]
-        : null;
+            ? _filteredList[_selectedIndex]
+            : null;
 
-    VoidCallback? onPressed = request != null
-        ? () {
-            setState(() {
-              request['tempStatus'] = status;
-              if (status != '배정완료') {
-                request['tempRoom'] = '';
-              }
-            });
-          }
-        : null;
+    VoidCallback? onPressed =
+        request != null
+            ? () {
+              setState(() {
+                request['tempStatus'] = status;
+                if (status != '배정완료') {
+                  request['tempRoom'] = '';
+                }
+              });
+            }
+            : null;
 
     final buttonStyle = TextStyle(fontSize: 16.sp, fontWeight: FontWeight.w600);
     final buttonPadding = EdgeInsets.symmetric(
@@ -1169,31 +1187,31 @@ class _RoommateManagePageState extends State<RoommateManagePage> {
 
     return isSelected
         ? ElevatedButton(
-            onPressed: onPressed,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: color,
-              foregroundColor: Colors.white,
-              textStyle: buttonStyle,
-              padding: buttonPadding,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8.r),
-              ),
+          onPressed: onPressed,
+          style: ElevatedButton.styleFrom(
+            backgroundColor: color,
+            foregroundColor: Colors.white,
+            textStyle: buttonStyle,
+            padding: buttonPadding,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(8.r),
             ),
-            child: Text(status),
-          )
+          ),
+          child: Text(status),
+        )
         : OutlinedButton(
-            onPressed: onPressed,
-            style: OutlinedButton.styleFrom(
-              foregroundColor: AppColors.fontSecondary,
-              side: BorderSide(color: AppColors.fontSecondary),
-              textStyle: buttonStyle,
-              padding: buttonPadding,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8.r),
-              ),
+          onPressed: onPressed,
+          style: OutlinedButton.styleFrom(
+            foregroundColor: AppColors.fontSecondary,
+            side: BorderSide(color: AppColors.fontSecondary),
+            textStyle: buttonStyle,
+            padding: buttonPadding,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(8.r),
             ),
-            child: Text(status),
-          );
+          ),
+          child: Text(status),
+        );
   }
 
   // --- Logic Methods ---
@@ -1231,9 +1249,8 @@ class _RoommateManagePageState extends State<RoommateManagePage> {
   void _performAutoAssignment() {
     int successCount = 0;
     int failCount = 0;
-    final List<Map<String, dynamic>> toAssign = _filteredList
-        .where((r) => r['status'] == '대기')
-        .toList();
+    final List<Map<String, dynamic>> toAssign =
+        _filteredList.where((r) => r['status'] == '대기').toList();
 
     for (var request in toAssign) {
       // 팀원 스타일: 동적 그룹 크기 계산
@@ -1250,19 +1267,21 @@ class _RoommateManagePageState extends State<RoommateManagePage> {
           (request['applicantName']?.contains('여') == true ? '여' : '남');
 
       // 팀원 스타일: 층별 제한이 있는 방 찾기
-      final rooms = _roomList.where((room) {
-        final isCorrectFloor =
-            (requestedRoomType == '2인실' &&
-                (room['floor'] == '9' || room['floor'] == '7')) ||
-            (requestedRoomType == '3인실' && room['floor'] == '8') ||
-            (requestedRoomType == '1인실' && room['floor'] == '6') ||
-            (room['floor'] == '10'); // 방학이용은 모든 타입 허용
+      final rooms =
+          _roomList.where((room) {
+            final isCorrectFloor =
+                (requestedRoomType == '2인실' &&
+                    (room['floor'] == '9' || room['floor'] == '7')) ||
+                (requestedRoomType == '3인실' && room['floor'] == '8') ||
+                (requestedRoomType == '1인실' && room['floor'] == '6') ||
+                (room['floor'] == '10'); // 방학이용은 모든 타입 허용
 
-        if (!isCorrectFloor) return false;
+            if (!isCorrectFloor) return false;
 
-        return room['gender'] == requestGender &&
-            (room['capacity'] - (room['assigned'] as List).length) >= groupSize;
-      }).toList();
+            return room['gender'] == requestGender &&
+                (room['capacity'] - (room['assigned'] as List).length) >=
+                    groupSize;
+          }).toList();
 
       if (rooms.isNotEmpty) {
         final room = rooms.first;
@@ -1356,9 +1375,10 @@ class _RoommateManagePageState extends State<RoommateManagePage> {
     if (_selectedIndex < 0 || _selectedIndex >= _filteredList.length) return;
     final request = _filteredList[_selectedIndex];
     final effectiveStatus = request['tempStatus'] ?? request['status'];
-    final effectiveRoom = request['tempRoom']?.isNotEmpty == true
-        ? request['tempRoom']
-        : request['room'];
+    final effectiveRoom =
+        request['tempRoom']?.isNotEmpty == true
+            ? request['tempRoom']
+            : request['room'];
 
     if (effectiveStatus == '반려' &&
         _rejectionReasonController.text.trim().isEmpty) {
@@ -1375,9 +1395,8 @@ class _RoommateManagePageState extends State<RoommateManagePage> {
       context: context,
       title: "변경사항 저장 확인",
       content: "신청 정보를 '${effectiveStatus}' 상태로 저장하시겠습니까?",
-      onConfirm: _tab == '신청관리'
-          ? _saveApplicationChanges
-          : _saveCumulativeChanges,
+      onConfirm:
+          _tab == '신청관리' ? _saveApplicationChanges : _saveCumulativeChanges,
     );
   }
 
@@ -1389,9 +1408,10 @@ class _RoommateManagePageState extends State<RoommateManagePage> {
 
     // 유효 상태/방 정보 가져오기 (임시 값이 있으면 사용)
     final effectiveStatus = request['tempStatus'] ?? request['status'];
-    final effectiveRoom = request['tempRoom']?.isNotEmpty == true
-        ? request['tempRoom']
-        : request['room'];
+    final effectiveRoom =
+        request['tempRoom']?.isNotEmpty == true
+            ? request['tempRoom']
+            : request['room'];
 
     try {
       // 한국어 상태값을 영어로 변환하여 DB에 저장
@@ -1400,7 +1420,7 @@ class _RoommateManagePageState extends State<RoommateManagePage> {
       // API 호출로 상태 업데이트
       final response = await http.put(
         Uri.parse(
-          'http://localhost:5050/api/admin/roommate/requests/${request['id']}/status',
+          '$apiBase/api/admin/roommate/requests/${request['id']}/status',
         ),
         headers: {'Content-Type': 'application/json'},
         body: json.encode({
@@ -1471,7 +1491,7 @@ class _RoommateManagePageState extends State<RoommateManagePage> {
       // API 호출로 메모와 반려 사유 업데이트
       final response = await http.put(
         Uri.parse(
-          'http://localhost:5050/api/admin/roommate/requests/${request['id']}/status',
+          '$apiBase/api/admin/roommate/requests/${request['id']}/status',
         ),
         headers: {'Content-Type': 'application/json'},
         body: json.encode({
@@ -1693,7 +1713,7 @@ class _RoommateManagePageState extends State<RoommateManagePage> {
     setState(() => _isLoading = true);
     try {
       final response = await http.get(
-        Uri.parse('http://localhost:5050/api/admin/roommate/requests'),
+        Uri.parse('$apiBase/api/admin/roommate/requests'),
       );
 
       if (response.statusCode == 200) {
@@ -1762,7 +1782,7 @@ class _RoommateManagePageState extends State<RoommateManagePage> {
   Future<void> _addSampleData() async {
     try {
       final response = await http.post(
-        Uri.parse('http://localhost:5050/api/admin/roommate/sample-data'),
+        Uri.parse('$apiBase/api/admin/roommate/sample-data'),
         headers: {'Content-Type': 'application/json'},
       );
 
@@ -1794,7 +1814,7 @@ class _RoommateManagePageState extends State<RoommateManagePage> {
   Future<void> _showHistory(int requestId) async {
     try {
       final response = await http.get(
-        Uri.parse('http://localhost:5050/api/roommate/history/$requestId'),
+        Uri.parse('$apiBase/api/roommate/history/$requestId'),
       );
 
       if (response.statusCode == 200) {

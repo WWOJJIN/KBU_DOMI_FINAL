@@ -13,6 +13,7 @@ import 'package:intl/intl.dart';
 import 'package:http/http.dart' as http;
 import 'package:syncfusion_flutter_core/theme.dart';
 import 'package:syncfusion_flutter_datagrid/datagrid.dart';
+import 'package:kbu_domi/env.dart';
 
 class AdOvernightPage extends StatefulWidget {
   const AdOvernightPage({super.key});
@@ -92,7 +93,7 @@ class _AdOvernightPageState extends State<AdOvernightPage> {
   Future<void> _loadNotice() async {
     try {
       final response = await http.get(
-        Uri.parse('http://localhost:5050/api/admin/notice?category=overnight'),
+        Uri.parse('$apiBase/api/admin/notice?category=overnight'),
       );
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
@@ -111,8 +112,8 @@ class _AdOvernightPageState extends State<AdOvernightPage> {
       final isUpdate = _notice != null && _notice!['id'] != null;
       final url =
           isUpdate
-              ? 'http://localhost:5050/api/admin/notice/${_notice!['id']}'
-              : 'http://localhost:5050/api/admin/notice';
+              ? '$apiBase/api/admin/notice/${_notice!['id']}'
+              : '$apiBase/api/admin/notice';
 
       final body = json.encode({
         'title': '외박 공지사항',
@@ -153,7 +154,7 @@ class _AdOvernightPageState extends State<AdOvernightPage> {
     setState(() => _isLoading = true);
     try {
       final response = await http.get(
-        Uri.parse('http://localhost:5050/api/overnight/requests'),
+        Uri.parse('$apiBase/api/overnight/requests'),
       );
       if (response.statusCode == 200) {
         final List<dynamic> data = json.decode(response.body);
@@ -283,7 +284,7 @@ class _AdOvernightPageState extends State<AdOvernightPage> {
   }) async {
     try {
       final response = await http.put(
-        Uri.parse('http://localhost:5050/api/overnight/request/$uuid/status'),
+        Uri.parse('$apiBase/api/overnight/request/$uuid/status'),
         headers: {'Content-Type': 'application/json'},
         body: json.encode({
           'status': newStatus,

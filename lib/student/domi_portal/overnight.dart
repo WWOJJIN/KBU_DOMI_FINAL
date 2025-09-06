@@ -10,6 +10,7 @@ import 'package:provider/provider.dart';
 import '../../student_provider.dart';
 import 'package:uuid/uuid.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:kbu_domi/env.dart';
 
 /// 외출/외박 신청 페이지
 /// - 외출: 당일 복귀하는 외출 신청
@@ -118,7 +119,7 @@ class _OutingRequestPageState extends State<OutingRequestPage> {
 
     try {
       final url =
-          'http://localhost:5050/api/overnight/student/requests?student_id=${student.studentId}';
+          '$apiBase/api/overnight/student/requests?student_id=${student.studentId}';
       print('API 호출 URL: $url');
 
       final response = await http.get(Uri.parse(url));
@@ -195,7 +196,7 @@ class _OutingRequestPageState extends State<OutingRequestPage> {
   Future<void> _loadNotice() async {
     try {
       final response = await http.get(
-        Uri.parse('http://localhost:5050/api/notice?category=overnight'),
+        Uri.parse('$apiBase/api/notice?category=overnight'),
       );
 
       if (response.statusCode == 200) {
@@ -305,7 +306,7 @@ class _OutingRequestPageState extends State<OutingRequestPage> {
 
       try {
         final response = await http.post(
-          Uri.parse('http://localhost:5050/api/overnight/request'),
+          Uri.parse('$apiBase/api/overnight/request'),
           headers: {'Content-Type': 'application/json'},
           body: json.encode(requestData),
         );
@@ -367,9 +368,7 @@ class _OutingRequestPageState extends State<OutingRequestPage> {
   Future<void> _deleteRequest(Map<String, dynamic> request) async {
     try {
       final response = await http.delete(
-        Uri.parse(
-          'http://localhost:5050/api/overnight/request/${request['out_uuid']}',
-        ),
+        Uri.parse('$apiBase/api/overnight/request/${request['out_uuid']}'),
       );
 
       if (response.statusCode == 200) {

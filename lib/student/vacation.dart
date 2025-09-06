@@ -8,6 +8,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import '../student_provider.dart';
+import 'package:kbu_domi/env.dart';
 
 class VacationPage extends StatefulWidget {
   const VacationPage({super.key});
@@ -93,7 +94,7 @@ class _VacationPageState extends State<VacationPage> {
     });
 
     try {
-      const String baseUrl = 'http://localhost:5050';
+      const String baseUrl = '$apiBase';
 
       final response = await http.post(
         Uri.parse('$baseUrl/api/vacation/apply'),

@@ -6,6 +6,7 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:provider/provider.dart';
 import '../student_provider.dart';
+import 'package:kbu_domi/env.dart';
 
 // --- 앱 공통 테마 ---
 class AppColors {
@@ -110,7 +111,7 @@ class _AppDinnerState extends State<AppDinner>
   Future<void> _loadPeriodInfo() async {
     try {
       final response = await http.get(
-        Uri.parse('http://localhost:5050/api/admin/dinner/period-info'),
+        Uri.parse('$apiBase/api/admin/dinner/period-info'),
       );
       print('석식 기간 정보 API 응답: ${response.statusCode} - ${response.body}');
 
@@ -142,9 +143,7 @@ class _AppDinnerState extends State<AppDinner>
 
     try {
       final response = await http.get(
-        Uri.parse(
-          'http://localhost:5050/api/dinner/requests?student_id=$studentId',
-        ),
+        Uri.parse('$apiBase/api/dinner/requests?student_id=$studentId'),
       );
 
       print('🍽️ 석식 API 응답 상태: ${response.statusCode}');
@@ -462,7 +461,7 @@ class _AppDinnerState extends State<AppDinner>
         print('🍽️ 석식 신청 데이터: $requestData');
 
         final response = await http.post(
-          Uri.parse('http://localhost:5050/api/dinner/apply'),
+          Uri.parse('$apiBase/api/dinner/apply'),
           headers: {'Content-Type': 'application/json'},
           body: json.encode(requestData),
         );
@@ -672,7 +671,7 @@ class _AppDinnerState extends State<AppDinner>
 
       final dinnerId = payment['dinner_id'];
       final response = await http.put(
-        Uri.parse('http://localhost:5050/api/admin/dinner/$dinnerId/status'),
+        Uri.parse('$apiBase/api/admin/dinner/$dinnerId/status'),
         headers: {'Content-Type': 'application/json'},
         body: json.encode({
           'action': 'refund',

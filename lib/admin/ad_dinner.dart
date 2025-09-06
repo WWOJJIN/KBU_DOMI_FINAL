@@ -9,6 +9,7 @@ import 'dart:convert';
 import 'package:syncfusion_flutter_core/theme.dart';
 import 'package:syncfusion_flutter_datagrid/datagrid.dart';
 import 'package:dropdown_button2/dropdown_button2.dart';
+import 'package:kbu_domi/env.dart';
 
 // --- AppColors 클래스 (ad_in_page.dart 스타일 참조하여 재구성) ---
 class AppColors {
@@ -120,7 +121,7 @@ class _AdDinnerPageState extends State<AdDinnerPage> {
   Future<void> _loadDinnerRequests() async {
     try {
       final response = await http.get(
-        Uri.parse('http://localhost:5050/api/admin/dinner/all-requests'),
+        Uri.parse('$apiBase/api/admin/dinner/all-requests'),
       );
       if (response.statusCode == 200) {
         final List<dynamic> data = json.decode(response.body);
@@ -144,7 +145,7 @@ class _AdDinnerPageState extends State<AdDinnerPage> {
   Future<void> _loadPeriodInfo() async {
     try {
       final response = await http.get(
-        Uri.parse('http://localhost:5050/api/admin/dinner/period-info'),
+        Uri.parse('$apiBase/api/admin/dinner/period-info'),
       );
       if (response.statusCode == 200) {
         if (mounted) setState(() => _periodInfo = json.decode(response.body));
@@ -157,7 +158,7 @@ class _AdDinnerPageState extends State<AdDinnerPage> {
   Future<void> _loadNotice() async {
     try {
       final response = await http.get(
-        Uri.parse('http://localhost:5050/api/admin/notice?category=dinner'),
+        Uri.parse('$apiBase/api/admin/notice?category=dinner'),
       );
       if (response.statusCode == 200) {
         if (mounted) setState(() => _notice = json.decode(response.body));
@@ -250,8 +251,8 @@ class _AdDinnerPageState extends State<AdDinnerPage> {
       final isUpdate = _notice != null && _notice!['id'] != null;
       final url =
           isUpdate
-              ? 'http://localhost:5050/api/admin/notice/${_notice!['id']}'
-              : 'http://localhost:5050/api/admin/notice';
+              ? '$apiBase/api/admin/notice/${_notice!['id']}'
+              : '$apiBase/api/admin/notice';
       final body = json.encode({
         'title': title,
         'content': content,
@@ -298,7 +299,7 @@ class _AdDinnerPageState extends State<AdDinnerPage> {
   }) async {
     try {
       final response = await http.post(
-        Uri.parse('http://localhost:5050/api/admin/dinner/period-settings'),
+        Uri.parse('$apiBase/api/admin/dinner/period-settings'),
         headers: {'Content-Type': 'application/json'},
         body: json.encode({
           'is_custom': isCustom,

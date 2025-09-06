@@ -11,6 +11,7 @@ import 'package:syncfusion_flutter_datagrid/datagrid.dart';
 import 'package:syncfusion_flutter_core/theme.dart';
 import 'package:dropdown_button2/dropdown_button2.dart';
 import 'package:intl/intl.dart';
+import 'package:kbu_domi/env.dart';
 
 // --- AppColors 클래스 (ad_dinner_page 스타일 적용) ---
 class AppColors {
@@ -189,7 +190,7 @@ class _AdJumhoPageState extends State<AdJumhoPage> {
     setState(() => _isLoading = true);
     try {
       // [수정] 건물 필터링 쿼리 다시 추가
-      String url = 'http://localhost:5050/api/rollcall/status';
+      String url = '$apiBase/api/rollcall/status';
       if (_selectedBuilding != "전체") {
         url += '?building=$_selectedBuilding';
       }
@@ -521,7 +522,7 @@ class _AdJumhoPageState extends State<AdJumhoPage> {
   Future<Map<String, String>> _loadCurrentSettings() async {
     try {
       final response = await http.get(
-        Uri.parse('http://localhost:5050/api/rollcall/settings'),
+        Uri.parse('$apiBase/api/rollcall/settings'),
       );
       if (response.statusCode == 200)
         return Map<String, String>.from(json.decode(response.body));
@@ -538,7 +539,7 @@ class _AdJumhoPageState extends State<AdJumhoPage> {
   Future<bool> _saveRollCallSettings(Map<String, String> settings) async {
     try {
       final response = await http.post(
-        Uri.parse('http://localhost:5050/api/rollcall/settings'),
+        Uri.parse('$apiBase/api/rollcall/settings'),
         headers: {'Content-Type': 'application/json'},
         body: json.encode(settings),
       );
@@ -679,7 +680,7 @@ class _AdJumhoPageState extends State<AdJumhoPage> {
   ) async {
     try {
       final response = await http.post(
-        Uri.parse('http://localhost:5050/api/rollcall/manual'),
+        Uri.parse('$apiBase/api/rollcall/manual'),
         headers: {'Content-Type': 'application/json'},
         body: json.encode({
           'student_id': studentId,

@@ -3,6 +3,7 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'package:kbu_domi/env.dart';
 
 // ----------- 컬러 및 텍스트 스타일 상수 -----------
 const Color kNavy = Color(0xFF1C2946);
@@ -67,9 +68,9 @@ class _AdDashPageState extends State<AdDashPage> {
     print('🔄 로딩 상태 설정 완료');
 
     try {
-      print('🌐 API 호출 시작: http://localhost:5050/api/admin/dashboard/summary');
+      print('🌐 API 호출 시작: $apiBase/api/admin/dashboard/summary');
       final response = await http.get(
-        Uri.parse('http://localhost:5050/api/admin/dashboard/summary'),
+        Uri.parse('$apiBase/api/admin/dashboard/summary'),
       );
 
       print('🌐 API 응답 상태: ${response.statusCode}');

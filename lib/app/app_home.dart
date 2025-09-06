@@ -5,6 +5,7 @@ import 'package:geolocator/geolocator.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:provider/provider.dart';
 import '../student_provider.dart';
+import 'package:kbu_domi/env.dart';
 
 class AppColors {
   static const primary = Color(0xFF4A69E2);
@@ -80,26 +81,20 @@ class _AppHomeState extends State<AppHome> with WidgetsBindingObserver {
 
     try {
       final responses = await Future.wait([
-        http.get(Uri.parse('http://localhost:5050/api/student/$studentId')),
+        http.get(Uri.parse('$apiBase/api/student/$studentId')),
         http.get(
           Uri.parse(
-            'http://localhost:5050/api/overnight_status_count?student_id=$studentId',
+            '$apiBase/api/overnight_status_count?student_id=$studentId',
           ),
         ),
         http.get(
-          Uri.parse(
-            'http://localhost:5050/api/as_status_count?student_id=$studentId',
-          ),
+          Uri.parse('$apiBase/api/as_status_count?student_id=$studentId'),
         ),
         http.get(
-          Uri.parse(
-            'http://localhost:5050/api/point/history?student_id=$studentId&type=상점',
-          ),
+          Uri.parse('$apiBase/api/point/history?student_id=$studentId&type=상점'),
         ),
         http.get(
-          Uri.parse(
-            'http://localhost:5050/api/point/history?student_id=$studentId&type=벌점',
-          ),
+          Uri.parse('$apiBase/api/point/history?student_id=$studentId&type=벌점'),
         ),
       ]);
 
@@ -194,7 +189,7 @@ class _AppHomeState extends State<AppHome> with WidgetsBindingObserver {
 
     try {
       final timeResponse = await http.get(
-        Uri.parse('http://localhost:5050/api/rollcall/is-time'),
+        Uri.parse('$apiBase/api/rollcall/is-time'),
       );
       if (timeResponse.statusCode == 200) {
         final timeData = json.decode(timeResponse.body);
@@ -230,7 +225,7 @@ class _AppHomeState extends State<AppHome> with WidgetsBindingObserver {
       );
 
       final response = await http.post(
-        Uri.parse('http://localhost:5050/api/rollcall/check'),
+        Uri.parse('$apiBase/api/rollcall/check'),
         headers: {'Content-Type': 'application/json'},
         body: json.encode({
           'student_id': studentId,

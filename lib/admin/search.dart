@@ -7,6 +7,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart'; // 📱 반응형 �
 // 실제 프로젝트의 파일 경로에 맞게 수정해!
 import 'package:kbu_domi/student/domi_portal/dash.dart';
 import 'package:kbu_domi/student_provider.dart';
+import 'package:kbu_domi/env.dart';
 
 class SearchPage extends StatefulWidget {
   const SearchPage({super.key});
@@ -58,12 +59,12 @@ class _SearchPageState extends State<SearchPage> {
       if (studentId.isNotEmpty) {
         searchParam = studentId;
         response = await http.get(
-          Uri.parse('http://localhost:5050/api/student/$searchParam'),
+          Uri.parse('$apiBase/api/student/$searchParam'),
         );
       } else {
         searchParam = studentName;
         response = await http.get(
-          Uri.parse('http://localhost:5050/api/student/name/$searchParam'),
+          Uri.parse('$apiBase/api/student/name/$searchParam'),
         );
       }
 

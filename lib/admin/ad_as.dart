@@ -6,6 +6,7 @@ import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
 import 'package:syncfusion_flutter_core/theme.dart';
 import 'package:syncfusion_flutter_datagrid/datagrid.dart';
+import 'package:kbu_domi/env.dart';
 
 class AdAsPage extends StatefulWidget {
   const AdAsPage({super.key});
@@ -103,7 +104,7 @@ class _AdAsPageState extends State<AdAsPage> {
     setState(() => _isLoading = true);
     try {
       final response = await http.get(
-        Uri.parse('http://localhost:5050/api/as/requests/all'),
+        Uri.parse('$apiBase/api/as/requests/all'),
       );
       if (response.statusCode == 200) {
         final List<dynamic> data = json.decode(utf8.decode(response.bodyBytes));
@@ -224,7 +225,7 @@ class _AdAsPageState extends State<AdAsPage> {
   Future<void> _loadNotice() async {
     try {
       final response = await http.get(
-        Uri.parse('http://localhost:5050/api/admin/notice?category=as'),
+        Uri.parse('$apiBase/api/admin/notice?category=as'),
       );
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
@@ -243,8 +244,8 @@ class _AdAsPageState extends State<AdAsPage> {
       final isUpdate = _notice != null && _notice!['id'] != null;
       final url =
           isUpdate
-              ? 'http://localhost:5050/api/admin/notice/${_notice!['id']}'
-              : 'http://localhost:5050/api/admin/notice';
+              ? '$apiBase/api/admin/notice/${_notice!['id']}'
+              : '$apiBase/api/admin/notice';
 
       final body = json.encode({
         'title': 'AS 공지사항',
@@ -292,7 +293,7 @@ class _AdAsPageState extends State<AdAsPage> {
   }) async {
     try {
       final response = await http.put(
-        Uri.parse('http://localhost:5050/api/as/request/$uuid/status'),
+        Uri.parse('$apiBase/api/as/request/$uuid/status'),
         headers: {'Content-Type': 'application/json'},
         body: json.encode({
           'status': newStatus,

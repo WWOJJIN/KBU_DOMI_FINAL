@@ -8,6 +8,7 @@ import 'application_data_service.dart';
 import 'package:http/http.dart' as http; // HTTP 통신을 위한 패키지 추가
 import 'dart:convert'; // JSON 인코딩/디코딩을 위한 패키지 추가
 import 'dart:developer'; // 로그를 위한 패키지 추가
+import 'package:kbu_domi/env.dart';
 
 // --- 디자인에 사용될 색상 정의 ---
 class AppColors {
@@ -414,7 +415,7 @@ class _AdRoomStatusPageState extends State<AdRoomStatusPage> {
                   try {
                     // API 호출
                     final response = await http.post(
-                      Uri.parse('http://localhost:5050/api/roommate/terminate'),
+                      Uri.parse('$apiBase/api/roommate/terminate'),
                       headers: {'Content-Type': 'application/json'},
                       body: jsonEncode({
                         'student_id': student1['studentId'],

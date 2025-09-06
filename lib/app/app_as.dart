@@ -8,6 +8,7 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:provider/provider.dart';
 import '../student_provider.dart';
+import 'package:kbu_domi/env.dart';
 
 // --- 앱 공통 테마 ---
 class AppColors {
@@ -115,7 +116,7 @@ class _AppAsState extends State<AppAs> with SingleTickerProviderStateMixin {
 
     try {
       final response = await http.get(
-        Uri.parse('http://localhost:5050/api/student/$studentId'),
+        Uri.parse('$apiBase/api/student/$studentId'),
       );
 
       if (response.statusCode == 200) {
@@ -162,9 +163,7 @@ class _AppAsState extends State<AppAs> with SingleTickerProviderStateMixin {
 
     try {
       final response = await http.get(
-        Uri.parse(
-          'http://localhost:5050/api/as/requests?student_id=$studentId',
-        ),
+        Uri.parse('$apiBase/api/as/requests?student_id=$studentId'),
       );
 
       if (!mounted) return;
@@ -265,7 +264,7 @@ class _AppAsState extends State<AppAs> with SingleTickerProviderStateMixin {
     try {
       // 먼저 AS 신청을 제출
       final response = await http.post(
-        Uri.parse('http://localhost:5050/api/as/apply'),
+        Uri.parse('$apiBase/api/as/apply'),
         headers: {'Content-Type': 'application/json'},
         body: json.encode({
           'student_id': studentId,
@@ -286,7 +285,7 @@ class _AppAsState extends State<AppAs> with SingleTickerProviderStateMixin {
               if (file.bytes != null) {
                 var request = http.MultipartRequest(
                   'POST',
-                  Uri.parse('http://localhost:5050/api/as/image'),
+                  Uri.parse('$apiBase/api/as/image'),
                 );
                 request.fields['as_uuid'] = asUuid;
                 request.files.add(
@@ -328,7 +327,7 @@ class _AppAsState extends State<AppAs> with SingleTickerProviderStateMixin {
   Future<void> _cancelASRequest(String uuid) async {
     try {
       final response = await http.delete(
-        Uri.parse('http://localhost:5050/api/as/request/$uuid'),
+        Uri.parse('$apiBase/api/as/request/$uuid'),
       );
 
       if (response.statusCode == 200) {

@@ -15,6 +15,7 @@ import 'package:uuid/uuid.dart';
 import 'package:http_parser/http_parser.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:dropdown_button2/dropdown_button2.dart';
+import 'package:kbu_domi/env.dart';
 
 // 파일 정보 모델
 class UploadFile {
@@ -121,7 +122,7 @@ class _ASRequestPageState extends State<ASRequestPage> {
       }
 
       final url = Uri.parse(
-        'http://localhost:5050/api/as/requests?student_id=${student.studentId}',
+        '$apiBase/api/as/requests?student_id=${student.studentId}',
       );
       final response = await http.get(url);
       print('🔍 웹 AS - API 응답: ${response.statusCode}');
@@ -172,7 +173,7 @@ class _ASRequestPageState extends State<ASRequestPage> {
       });
 
       final response = await http.get(
-        Uri.parse('http://localhost:5050/api/notice?category=as'),
+        Uri.parse('$apiBase/api/notice?category=as'),
       );
 
       if (response.statusCode == 200) {
@@ -299,7 +300,7 @@ class _ASRequestPageState extends State<ASRequestPage> {
   Future<void> _deleteRequest(int index) async {
     try {
       final asUuid = requests[index]['as_uuid'];
-      final url = Uri.parse('http://localhost:5050/api/as/request/$asUuid');
+      final url = Uri.parse('$apiBase/api/as/request/$asUuid');
 
       final response = await http.delete(url);
 
@@ -324,7 +325,7 @@ class _ASRequestPageState extends State<ASRequestPage> {
   }
 
   Future<void> _submitASRequest() async {
-    final url = Uri.parse('http://localhost:5050/api/as/apply');
+    final url = Uri.parse('$apiBase/api/as/apply');
     final data = {
       'student_id': studentIdController.text,
       'as_category': selectedIssue ?? '',
@@ -344,7 +345,7 @@ class _ASRequestPageState extends State<ASRequestPage> {
       final asUuidFromServer = respData['as_uuid'];
 
       for (final imgPath in uploadedImgPaths) {
-        final imgUrl = Uri.parse('http://localhost:5050/api/as/image');
+        final imgUrl = Uri.parse('$apiBase/api/as/image');
         await http.post(
           imgUrl,
           headers: {'Content-Type': 'application/json'},
@@ -443,7 +444,7 @@ class _ASRequestPageState extends State<ASRequestPage> {
       }
 
       final dio = Dio();
-      dio.options.baseUrl = 'http://localhost:5050';
+      dio.options.baseUrl = '$apiBase';
       dio.options.connectTimeout = const Duration(seconds: 120);
       dio.options.receiveTimeout = const Duration(seconds: 120);
 

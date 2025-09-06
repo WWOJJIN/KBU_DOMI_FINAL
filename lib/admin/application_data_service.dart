@@ -2,6 +2,7 @@
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'dart:developer';
+import 'package:kbu_domi/env.dart';
 
 class ApplicationDataService {
   // 캐시된 데이터를 저장할 변수들
@@ -19,7 +20,7 @@ class ApplicationDataService {
   ApplicationDataService._();
 
   // 서버 API 기본 URL
-  static const String _baseUrl = 'http://localhost:5050';
+  static const String _baseUrl = '$apiBase';
 
   /// 데이터 초기화 함수 - 실제 API에서 데이터를 가져옴
   static Future<void> initializeData({bool forceRefresh = false}) async {

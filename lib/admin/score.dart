@@ -8,6 +8,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'package:kbu_domi/env.dart';
 
 // === 컬러 및 텍스트 스타일 ===
 const Color kNavy = Color(0xFF1C2946);
@@ -118,9 +119,7 @@ class _ScorePageState extends State<ScorePage> {
   Future<void> _loadStudents() async {
     setState(() => isLoading = true);
     try {
-      final response = await http.get(
-        Uri.parse('http://localhost:5050/api/admin/students'),
-      );
+      final response = await http.get(Uri.parse('$apiBase/api/admin/students'));
       if (response.statusCode == 200) {
         final data = json.decode(response.body) as List;
         setState(() {
@@ -159,7 +158,7 @@ class _ScorePageState extends State<ScorePage> {
     setState(() => isLoadingScores = true);
     try {
       final response = await http.get(
-        Uri.parse('http://localhost:5050/api/admin/student/scores/$studentId'),
+        Uri.parse('$apiBase/api/admin/student/scores/$studentId'),
       );
       if (response.statusCode == 200) {
         final data = json.decode(response.body) as List;
@@ -222,7 +221,7 @@ class _ScorePageState extends State<ScorePage> {
 
       // 상벌점 데이터 전송
       final response = await http.post(
-        Uri.parse('http://localhost:5050/api/admin/student/scores'),
+        Uri.parse('$apiBase/api/admin/student/scores'),
         headers: {'Content-Type': 'application/json'},
         body: json.encode({
           'student_id': _selectedStudent!.studentId,
@@ -269,7 +268,7 @@ class _ScorePageState extends State<ScorePage> {
     try {
       var request = http.MultipartRequest(
         'POST',
-        Uri.parse('http://localhost:5050/api/admin/score/upload'),
+        Uri.parse('$apiBase/api/admin/score/upload'),
       );
 
       if (kIsWeb && file.bytes != null) {
@@ -301,7 +300,7 @@ class _ScorePageState extends State<ScorePage> {
   Future<void> _addSampleData() async {
     try {
       final response = await http.post(
-        Uri.parse('http://localhost:5050/api/admin/score/sample-data'),
+        Uri.parse('$apiBase/api/admin/score/sample-data'),
       );
       if (response.statusCode == 200) {
         final result = json.decode(response.body);
@@ -789,7 +788,7 @@ class _ScorePageState extends State<ScorePage> {
       imageWidget = Image.memory(fileBytes);
     } else if (filePath != null && filePath.startsWith('score/')) {
       // 4. 서버에서 업로드된 파일
-      imageWidget = Image.network('http://localhost:5050/uploads/$filePath');
+      imageWidget = Image.network('$apiBase/uploads/$filePath');
     } else {
       // 5. 표시할 이미지가 없는 경우
       imageWidget = const Text("이미지 정보가 없습니다.");

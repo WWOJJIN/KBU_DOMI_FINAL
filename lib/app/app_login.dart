@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'package:flutter_screenutil/flutter_screenutil.dart'; // ✅ 반응형
 import 'package:provider/provider.dart';
 import '../student_provider.dart';
+import 'package:kbu_domi/env.dart';
 
 class AppColors {
   static const primary = Color(0xFF4A69E2);
@@ -70,7 +71,7 @@ class _AppLoginState extends State<AppLogin> {
     final pw = _pwController.text.trim();
 
     try {
-      final url = Uri.parse('http://localhost:5050/api/login');
+      final url = Uri.parse('$apiBase/api/login');
       final response = await http.post(
         url,
         headers: {'Content-Type': 'application/json'},

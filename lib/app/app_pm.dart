@@ -6,6 +6,7 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:provider/provider.dart';
 import '../student_provider.dart';
+import 'package:kbu_domi/env.dart';
 
 // --- KBU 도미토리 스타일 컬러 ---
 const Color kKbuBg = Color(0xFFF4F6FA);
@@ -90,14 +91,10 @@ class _AppPmState extends State<AppPm> {
       // 상점과 벌점을 병렬로 가져오기
       final responses = await Future.wait([
         http.get(
-          Uri.parse(
-            'http://localhost:5050/api/point/history?student_id=$studentId&type=상점',
-          ),
+          Uri.parse('$apiBase/api/point/history?student_id=$studentId&type=상점'),
         ),
         http.get(
-          Uri.parse(
-            'http://localhost:5050/api/point/history?student_id=$studentId&type=벌점',
-          ),
+          Uri.parse('$apiBase/api/point/history?student_id=$studentId&type=벌점'),
         ),
       ]);
 
