@@ -683,10 +683,19 @@ class _DashPageState extends State<DashPage> {
   /// 프로필 카드
   Widget _buildProfileCard(StudentProvider student) {
     final roomNum = student.roomNum;
-    final dormInfo =
-        (roomNum != null && roomNum.isNotEmpty)
-            ? '${roomNum[0]}동 $roomNum'
-            : '호실 정보 없음';
+    final dormBuilding = student.dormBuilding;
+
+    String dormInfo;
+    if (roomNum != null && roomNum.isNotEmpty) {
+      if (dormBuilding != null && dormBuilding.isNotEmpty) {
+        dormInfo = '$dormBuilding $roomNum';
+      } else {
+        // dormBuilding이 없으면 기존 방식 사용 (fallback)
+        dormInfo = '${roomNum[0]}동 $roomNum';
+      }
+    } else {
+      dormInfo = '호실 정보 없음';
+    }
 
     return _BaseCard(
       padding: const EdgeInsets.all(20),
@@ -1184,11 +1193,7 @@ class _DashPageState extends State<DashPage> {
                       _buildDetailItem(
                         icon: Icons.home_work_rounded,
                         label: "기숙사",
-                        value:
-                            (student.roomNum != null &&
-                                    student.roomNum!.isNotEmpty)
-                                ? '${student.roomNum![0]}동'
-                                : null,
+                        value: student.dormBuilding,
                       ),
                       _buildDetailItem(
                         icon: Icons.meeting_room_rounded,

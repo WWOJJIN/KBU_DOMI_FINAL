@@ -8,6 +8,7 @@ class StudentProvider with ChangeNotifier {
   String? phoneNum;
   String? parPhone;
   String? roomNum;
+  String? dormBuilding;
   String? year;
   String? semester;
   String? paybackBank;
@@ -38,20 +39,24 @@ class StudentProvider with ChangeNotifier {
     phoneNum = userData['phone_num'];
     parPhone = userData['par_phone'];
     roomNum = userData['room_num']?.toString();
+    dormBuilding = userData['dorm_building'];
     year = userData['year']?.toString();
     semester = userData['semester']?.toString();
     paybackBank = userData['payback_bank'];
     paybackName = userData['payback_name'];
     paybackNum = userData['payback_num'];
     smoking = userData['smoking'];
-    roommate = null;
-    roommateDept = null;
+    roommate = userData['roommate_name'];
+    roommateDept = userData['roommate_dept'];
 
     print('StudentProvider - 설정된 정보:');
     print('studentId: $studentId');
     print('name: $name');
     print('roomNum: $roomNum');
+    print('dormBuilding: $dormBuilding');
     print('department: $department');
+    print('roommate: $roommate');
+    print('roommateDept: $roommateDept');
 
     // 로컬 저장소에 저장
     await StorageService.saveStudentInfo(userData);
@@ -66,6 +71,7 @@ class StudentProvider with ChangeNotifier {
     phoneNum = null;
     parPhone = null;
     roomNum = null;
+    dormBuilding = null;
     year = null;
     semester = null;
     paybackBank = null;
@@ -92,14 +98,15 @@ class StudentProvider with ChangeNotifier {
         phoneNum = savedInfo['phone_num'];
         parPhone = savedInfo['par_phone'];
         roomNum = savedInfo['room_num']?.toString();
+        dormBuilding = savedInfo['dorm_building'];
         year = savedInfo['year']?.toString();
         semester = savedInfo['semester']?.toString();
         paybackBank = savedInfo['payback_bank'];
         paybackName = savedInfo['payback_name'];
         paybackNum = savedInfo['payback_num'];
         smoking = savedInfo['smoking'];
-        roommate = null;
-        roommateDept = null;
+        roommate = savedInfo['roommate_name'];
+        roommateDept = savedInfo['roommate_dept'];
 
         print('StudentProvider - 저장된 정보에서 복원 완료: $studentId');
         notifyListeners();

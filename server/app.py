@@ -1163,16 +1163,18 @@ def get_student_by_id(student_id):
     conn = get_db()
     try:
         with conn.cursor() as cur:
-            # academic_status 추가하고 birth_date 형식 변경
+            # 학생 기본 정보와 룸메이트 정보를 함께 조회
             cur.execute('''
                 SELECT
-                    student_id, name, dept, gender, grade, phone_num,
-                    DATE_FORMAT(birth_date, %s) as birth_date,
-                    par_name, par_phone, payback_bank, payback_name, payback_num,
-                    dorm_building, room_num, stat, check_in, check_out,
-                    academic_status, roommate_id, password
-                FROM Domi_Students
-                WHERE student_id = %s
+                    ds.student_id, ds.name, ds.dept, ds.gender, ds.grade, ds.phone_num,
+                    DATE_FORMAT(ds.birth_date, %s) as birth_date,
+                    ds.par_name, ds.par_phone, ds.payback_bank, ds.payback_name, ds.payback_num,
+                    ds.dorm_building, ds.room_num, ds.stat, ds.check_in, ds.check_out,
+                    ds.academic_status, ds.roommate_id, ds.password, ds.smoking,
+                    rm.name as roommate_name, rm.dept as roommate_dept
+                FROM Domi_Students ds
+                LEFT JOIN Domi_Students rm ON ds.roommate_id = rm.student_id
+                WHERE ds.student_id = %s
             ''', ('%Y-%m-%d', student_id))
             data = cur.fetchone()
 
